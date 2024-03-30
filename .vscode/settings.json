@@ -1,0 +1,11 @@
+{
+    "cSpell.words": [
+        "dtype",
+        "imread",
+        "ndarray",
+        "skimage",
+        "torchsummary",
+        "torchvision",
+        "twike"
+    ]
+}
