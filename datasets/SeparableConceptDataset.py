@@ -1,4 +1,4 @@
-from os.path import join
+from os.path import join, exists
 
 import numpy as np
 import torch
@@ -12,8 +12,10 @@ from typing import Tuple
 class ProductConceptDataset(Dataset):
 	def __init__(self, name: str, device: torch.device):
 		self.name = name
+  
+		self.concepts = read_csv(join(name, "product_concepts.csv"), dtype="category")
 
-		self.concepts = read_csv(join(name, "labels.csv"), dtype="category")
+   
 		self.domains = self.concepts.columns
 		self.domain_properties = np.array(
 			[self.concepts[column].cat.categories for column in self.domains]
@@ -39,8 +41,7 @@ class ProductConceptDataset(Dataset):
 			[join(self.name, f"{i}.png") for i in range(len(self.concepts))],
 			conserve_memory=False,
 		)
-		self.instances = torch.stack([self.transform(image) for image in self.instances])
-		self.instances = self.instances.to(device)
+		self.instances = torch.stack([self.transform(image) for image in self.instances]).to(device)
 
 	def __len__(self) -> int:
 		return len(self.concepts)
@@ -64,9 +65,9 @@ class ProductConceptDataset(Dataset):
 		self, x: torch.Tensor, concept: torch.Tensor
 		) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 		false_concept = torch.randint_like(
-			concept, 0, self.num_properties - 1, device=concept.device, dtype=torch.long
+			concept, 0, self.num_properties - 1, device=concept.device, dtype=torch.long # -1 to avoid the true concept
 		)
-		false_concept[false_concept == self.remove_offset(concept)] += 1
+		false_concept[false_concept >= self.remove_offset(concept)] += 1
 		false_concept = self.add_offset(false_concept)
 
 		x = torch.cat([x, x])
