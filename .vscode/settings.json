@@ -1,11 +1,18 @@
 {
     "cSpell.words": [
         "dtype",
+        "figsize",
+        "fromarray",
+        "gridspec",
+        "hspace",
         "imread",
+        "imshow",
         "ndarray",
         "skimage",
+        "spriteworld",
         "torchsummary",
         "torchvision",
-        "twike"
+        "twike",
+        "wspace"
     ]
 }

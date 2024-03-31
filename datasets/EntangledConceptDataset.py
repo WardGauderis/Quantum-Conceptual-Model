@@ -52,7 +52,7 @@ class EntangledConceptDataset(Dataset):
 				self.concepts = self.concepts["correct"]
 
 		self.concepts = torch.tensor(
-			self.concepts[concept_name], dtype=torch.double, device=device
+			self.concepts, dtype=torch.double, device=device
 		)
 
 		print(
