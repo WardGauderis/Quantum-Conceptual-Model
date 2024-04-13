@@ -28,7 +28,7 @@ class EntangledConceptDataset(Dataset):
 		match concept_name:
 			case "twike":
 				self.concepts = (
-					(self.concepts["color"] == "red")
+					(self.conceppts["color"] == "red")
 					& (self.concepts["shape"] == "circle")
 				) | (
 					(self.concepts["color"] == "blue")
