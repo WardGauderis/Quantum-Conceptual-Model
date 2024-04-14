@@ -1,7 +1,21 @@
-import torch
-from torch import nn
-from torchsummary import summary
+#%%
 
+# dataclass
+
+# wandb + lightning
+
+
+import torch as t
+from torch import nn, Tensor
+from torchinfo import summary
+
+from jaxtyping import Int, Float
+from dataclasses import dataclass
+import einops
+from rich import print
+from rich.table import Table
+
+#%%
 
 class Encoder(nn.Module):
 	def __init__(self, output: int):
@@ -15,7 +29,7 @@ class Encoder(nn.Module):
 			nn.Conv2d(64, 64, 4, 2),
 			nn.ReLU(True),
 			nn.Conv2d(64, 64, 4, 2),
-			nn.ReLU(True)
+			nn.ReLU(True),
 		)
 
 		self.dense = nn.Sequential(
@@ -31,13 +45,15 @@ class Encoder(nn.Module):
 			else:
 				nn.init.zeros_(weight)
 
-
-	def forward(self, x: torch.Tensor) -> torch.Tensor:
+	def forward(
+		self, x: Float[Tensor, "batch color height width"]
+	) -> Float[Tensor, "batch encoding"]:
 		x = self.conv(x)
 		x = x.view(x.size(0), -1)
 		x = self.dense(x)
 		return x
 
+#%%
 
 class Decoder(nn.Module):
 	def __init__(self, output: int):
@@ -68,19 +84,22 @@ class Decoder(nn.Module):
 			else:
 				nn.init.zeros_(weight)
 
-	def forward(self, x: torch.Tensor) -> torch.Tensor:
+	def forward(self, x: Float[Tensor, "batch encoding"]) -> Float[Tensor, "batch color height width"]:
 		x = self.dense(x)
 		x = x.view(x.size(0), 64, 2, 2)
 		x = self.conv(x)
 		return x
 
-	def loss(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+	def loss(self, x: Float[Tensor, "batch color height width"], y: Float[Tensor, "batch color height width"]) -> Float[Tensor, ""]:
 		x = self.backward(x)
 		return self.loss(x, y)
 
 
+#%%
 
 if __name__ == "__main__":
 	model = Encoder(12)
 	model.to("cuda:0")
-	summary(model, (3, 64, 64))
+	print(summary(model, (1, 3, 64, 64)))
+
+# %%
