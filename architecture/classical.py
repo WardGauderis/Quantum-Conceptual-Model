@@ -58,11 +58,11 @@ class Encoder(nn.Module):
 #%%
 
 class Decoder(nn.Module):
-	def __init__(self, output: int):
+	def __init__(self, input: int):
 		super().__init__()
 
 		self.dense = nn.Sequential(
-			nn.Linear(output, 256),
+			nn.Linear(input, 256),
 			nn.ReLU(True),
 			nn.Linear(256, 256),
 			nn.ReLU(True),

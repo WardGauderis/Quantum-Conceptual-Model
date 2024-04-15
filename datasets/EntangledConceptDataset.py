@@ -1,16 +1,16 @@
 from os.path import join
+from typing import Tuple
 
 import numpy as np
-import torch
+import torch as t
 from pandas import read_csv
 from skimage.io import imread_collection
 from torch.utils.data import Dataset
 from torchvision import transforms
-from typing import Tuple
 
 
 class EntangledConceptDataset(Dataset):
-	def __init__(self, name: str, concept_name: str, device: torch.device):
+	def __init__(self, name: str, concept_name: str, device: t.device):
 		self.name = name
 
 		match concept_name:
@@ -28,7 +28,7 @@ class EntangledConceptDataset(Dataset):
 		match concept_name:
 			case "twike":
 				self.concepts = (
-					(self.conceppts["color"] == "red")
+					(self.concepts["color"] == "red")
 					& (self.concepts["shape"] == "circle")
 				) | (
 					(self.concepts["color"] == "blue")
@@ -51,8 +51,8 @@ class EntangledConceptDataset(Dataset):
 			case "blackbird":
 				self.concepts = self.concepts["correct"]
 
-		self.concepts = torch.tensor(
-			self.concepts, dtype=torch.double, device=device
+		self.concepts = t.tensor(
+			self.concepts, dtype=t.double, device=device
 		)
 
 		print(
@@ -65,39 +65,39 @@ class EntangledConceptDataset(Dataset):
 			[join(self.name, f"{i}.png") for i in range(len(self.concepts))],
 			conserve_memory=False,
 		)
-		self.instances = torch.stack(
+		self.instances = t.stack(
 			[self.transform(image) for image in self.instances]
 		).to(device)
 
 		if concept_name == "progression":  # Make puzzles column-major
-			self.images = self.images.reshape(-1, 3, 3, 3, 64, 64).transpose(2, 1)
+			self.instances = self.instances.reshape(-1, 3, 3, 3, 64, 64).transpose(2, 1)
 		if concept_name == "distribute_three" or concept_name == "progression":
-			self.images = self.images.reshape(len(self.labels), 3, 3, 64, 64)
+			self.instances = self.instances.reshape(len(self.concepts), 3, 3, 64, 64)
 		elif concept_name == "blackbird":
-			self.images = self.images.reshape(len(self.labels), 9, 3, 64, 64)
+			self.instances = self.instances.reshape(len(self.concepts), 9, 3, 64, 64)
 
 	def __len__(self) -> int:
 		return len(self.concepts)
 
 	def preprocess(
-		self, x: torch.Tensor, concept: torch.Tensor
-	) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-		return x, torch.zeros_like(concept, dtype=torch.long), concept
+		self, x: t.Tensor, concept: t.Tensor
+	) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
+		return x, t.zeros_like(concept, dtype=t.long), concept
 
-	def __getitem__(self, i) -> Tuple[torch.Tensor, torch.Tensor]:
+	def __getitem__(self, i) -> Tuple[t.Tensor, t.Tensor]:
 		return self.instances[i], self.concepts[i]
 
 
 if __name__ == "__main__":
 	# twike
     
-	dataset = EntangledConceptDataset("data/shapes/val", "twike", "cuda:0")
+	dataset = EntangledConceptDataset("data/shapes/val", "twike", t.device("cuda:0"))
 	print(len(dataset))
  
 	# rows
 
 	dataset = EntangledConceptDataset(
-		"data/blackbird/val", "distribute_three", "cuda:0"
+		"data/blackbird/val", "distribute_three", t.device("cuda:0")
 	)
 	print(len(dataset))
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
  
 	# blackbird
  
-	dataset = EntangledConceptDataset("data/blackbird/val", "blackbird", "cuda:0")
+	dataset = EntangledConceptDataset("data/blackbird/val", "blackbird", t.device("cuda:0"))
 	print(len(dataset))
 
 	x, y = dataset[0]
