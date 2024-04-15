@@ -5,17 +5,19 @@
 # wandb + lightning
 
 
-import torch as t
-from torch import nn, Tensor
-from torchinfo import summary
-
-from jaxtyping import Int, Float
 from dataclasses import dataclass
+
 import einops
+import torch as t
+from jaxtyping import Float, Int
 from rich import print
 from rich.table import Table
+from torch import Tensor, nn
+from torchinfo import summary
 
 #%%
+
+    
 
 class Encoder(nn.Module):
 	def __init__(self, output: int):

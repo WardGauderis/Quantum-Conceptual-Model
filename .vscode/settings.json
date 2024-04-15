@@ -16,5 +16,7 @@
         "torchvision",
         "twike",
         "wspace"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true
 }
