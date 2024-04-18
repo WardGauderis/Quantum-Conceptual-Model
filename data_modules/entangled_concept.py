@@ -1,16 +1,21 @@
+# %%
 from os.path import join
 from typing import Tuple
 
+import lightning as l
 import numpy as np
 import torch as t
 from pandas import read_csv
 from skimage.io import imread_collection
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
 
+# %%
+
+
 class EntangledConceptDataset(Dataset):
-	def __init__(self, name: str, concept_name: str, device: t.device):
+	def __init__(self, name: str, concept_name: str):
 		self.name = name
 
 		match concept_name:
@@ -51,9 +56,7 @@ class EntangledConceptDataset(Dataset):
 			case "blackbird":
 				self.concepts = self.concepts["correct"]
 
-		self.concepts = t.tensor(
-			self.concepts, dtype=t.double, device=device
-		)
+		self.concepts = t.tensor(self.concepts, dtype=t.double)
 
 		print(
 			f"Balance of {self.name}-{concept_name} dataset: {self.concepts.mean().item()} true"
@@ -65,9 +68,7 @@ class EntangledConceptDataset(Dataset):
 			[join(self.name, f"{i}.png") for i in range(len(self.concepts))],
 			conserve_memory=False,
 		)
-		self.instances = t.stack(
-			[self.transform(image) for image in self.instances]
-		).to(device)
+		self.instances = t.stack([self.transform(image) for image in self.instances])
 
 		if concept_name == "progression":  # Make puzzles column-major
 			self.instances = self.instances.reshape(-1, 3, 3, 3, 64, 64).transpose(2, 1)
@@ -88,17 +89,17 @@ class EntangledConceptDataset(Dataset):
 		return self.instances[i], self.concepts[i]
 
 
+# %%
+
 if __name__ == "__main__":
 	# twike
-    
-	dataset = EntangledConceptDataset("data/shapes/val", "twike", t.device("cuda:0"))
+
+	dataset = EntangledConceptDataset("data/shapes/val", "twike")
 	print(len(dataset))
- 
+
 	# rows
 
-	dataset = EntangledConceptDataset(
-		"data/blackbird/val", "distribute_three", t.device("cuda:0")
-	)
+	dataset = EntangledConceptDataset("data/blackbird/val", "distribute_three")
 	print(len(dataset))
 
 	x, y = dataset[3]
@@ -110,11 +111,11 @@ if __name__ == "__main__":
 	for i in range(3):
 		ax[i].imshow(x[i].permute(1, 2, 0))
 		ax[i].axis("off")
-	plt.show() 
- 
+	plt.show()
+
 	# blackbird
- 
-	dataset = EntangledConceptDataset("data/blackbird/val", "blackbird", t.device("cuda:0"))
+
+	dataset = EntangledConceptDataset("data/blackbird/val", "blackbird")
 	print(len(dataset))
 
 	x, y = dataset[0]
@@ -125,3 +126,31 @@ if __name__ == "__main__":
 		for j in range(3):
 			ax[i, j].imshow(x[3 * i + j].permute(1, 2, 0))
 	plt.show()
+
+
+# %%
+
+
+class EntangledConceptDataModule(l.LightningDataModule):
+	def __init__(self, data_dir: str, type: str, batch_size: int):
+		super().__init__()
+		self.data_dir = data_dir
+		self.type = type
+		self.batch_size = batch_size
+
+		self.num_workers = 4
+		self.pin_memory = True
+
+	def setup(self, stage: str):
+		self.train = EntangledConceptDataset(self.data_dir + "/train", self.type)
+		self.val = EntangledConceptDataset(self.data_dir + "/val", self.type)
+		self.test = EntangledConceptDataset(self.data_dir + "/test", self.type)
+
+	def train_dataloader(self):
+		return DataLoader(self.train, self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
+
+	def val_dataloader(self):
+		return DataLoader(self.val, len(self.val), num_workers=self.num_workers, pin_memory=self.pin_memory)
+
+	def test_dataloader(self):
+		return DataLoader(self.test, len(self.test), num_workers=self.num_workers, pin_memory=self.pin_memory)

@@ -1,4 +1,5 @@
-import classical
+from . import Encoder, Decoder
+from . import VQC
 import lightning as l
 import torch as t
 from torch import nn
@@ -9,13 +10,14 @@ from torchmetrics.classification import BinaryAccuracy
 class Hybrid(l.LightningModule):
     def __init__(self):
         super().__init__()
+        self.save_hyperparameters()
         
-        embedding = 12
+        embedding_dim = 12
         
-        self.encoder = classical.Encoder(embedding)
-        self.decoder = classical.Decoder(embedding)
+        self.encoder = Encoder(embedding_dim)
+        self.decoder = Decoder(embedding_dim)
         
-        self.
+        self.vqc = VQC()
 
         # self.binary_accuracy = BinaryAccuracy()
     
@@ -24,10 +26,27 @@ class Hybrid(l.LightningModule):
         
     def training_step(self, batch, batch_idx):
         x, y = batch
-        y_pred = self(x)
-        loss = nn.functional.binary_cross_entropy(y_pred, y)
-        self.log("train_loss", loss)
+        encoding = self.encoder(x)
+        decoding = self.decoder(encoding)
+        loss = nn.functional.mse_loss(decoding, x)
+        self.log("train_loss", loss, on_epoch=True, prog_bar=True, logger=True)
         return loss
+    
+    # def validation_step(self, batch, batch_idx):
+    #     x, y = batch
+    #     y_pred = self(x)
+    #     loss = nn.functional.binary_cross_entropy(y_pred, y)
+    #     self.log("val_loss", loss)
+    #     return loss
+    
+    # def test_step(self, batch, batch_idx):
+    #     x, y = batch
+    #     y_pred = self(x)
+    #     loss = nn.functional.binary_cross_entropy(y_pred, y)
+    #     self.log("test_loss", loss)
+    #     return loss
+    
+    
 
 
 if __name__ == "__main__":

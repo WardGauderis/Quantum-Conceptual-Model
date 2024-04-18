@@ -78,8 +78,6 @@ class Decoder(nn.Module):
 			nn.ConvTranspose2d(64, 3, 4, 2),
 		)
 
-		self.loss = nn.MSELoss()
-
 		for weight in self.parameters():
 			if len(weight.shape) > 1:
 				nn.init.xavier_uniform_(weight)
@@ -91,10 +89,6 @@ class Decoder(nn.Module):
 		x = x.view(x.size(0), 64, 2, 2)
 		x = self.conv(x)
 		return x
-
-	def loss(self, x: Float[Tensor, "batch color height width"], y: Float[Tensor, "batch color height width"]) -> Float[Tensor, ""]:
-		x = self.backward(x)
-		return self.loss(x, y)
 
 
 #%%
