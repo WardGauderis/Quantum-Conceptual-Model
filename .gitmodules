@@ -1,3 +1,3 @@
 [submodule "data/blackbird"]
-	path = data/blackbird
+	path = blackbird
 	url = https://github.com/WardGauderis/Blackbird.git
