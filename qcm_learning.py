@@ -35,7 +35,10 @@ trainer.test(model, shapes)
 
 result = trainer.predict(model, shapes)
 
-x_pred, y_pred = result[0]
+if result is None:
+    raise ValueError("No predictions made")
+else:
+    x_pred, y_pred = result[0]
 
 plt.imshow(x_pred[0].permute(1, 2, 0))
 

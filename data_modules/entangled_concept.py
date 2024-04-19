@@ -5,11 +5,12 @@ from typing import Tuple
 import lightning as l
 import numpy as np
 import torch as t
+from jaxtyping import Float, Int
 from pandas import read_csv
 from skimage.io import imread_collection
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-
 
 # %%
 
@@ -28,35 +29,35 @@ class EntangledConceptDataset(Dataset):
 			case _:
 				filename = "product_concepts.csv"
 
-		self.concepts = read_csv(join(name, filename), dtype="category")
+		concepts = read_csv(join(name, filename), dtype="category")
 
 		match concept_name:
 			case "twike":
-				self.concepts = (
-					(self.concepts["color"] == "red")
-					& (self.concepts["shape"] == "circle")
+				concepts = (
+					(concepts["color"] == "red")
+					& (concepts["shape"] == "circle")
 				) | (
-					(self.concepts["color"] == "blue")
-					& (self.concepts["shape"] == "square")
+					(concepts["color"] == "blue")
+					& (concepts["shape"] == "square")
 				)
 			case "red":
-				self.concepts = self.concepts["color"] == "red"
+				concepts = concepts["color"] == "red"
 			case "red_and_circle":
-				self.concepts = (self.concepts["color"] == "red") & (
-					self.concepts["shape"] == "circle"
+				concepts = (concepts["color"] == "red") & (
+					concepts["shape"] == "circle"
 				)
 			case "red__or_blue":
-				self.concepts = (self.concepts["color"] == "red") | (
-					self.concepts["color"] == "blue"
+				concepts = (concepts["color"] == "red") | (
+					concepts["color"] == "blue"
 				)
 			case "red_or_circle":
-				self.concepts = (self.concepts["color"] == "red") | (
-					self.concepts["shape"] == "circle"
+				concepts = (concepts["color"] == "red") | (
+					concepts["shape"] == "circle"
 				)
 			case "blackbird":
-				self.concepts = self.concepts["correct"]
+				concepts = concepts["correct"]
 
-		self.concepts = t.tensor(self.concepts, dtype=t.double)
+		self.concepts = t.tensor(concepts, dtype=t.long)
 
 		print(
 			f"Balance of {self.name}-{concept_name} dataset: {self.concepts.mean().item()} true"
@@ -85,7 +86,7 @@ class EntangledConceptDataset(Dataset):
 	) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
 		return x, t.zeros_like(concept, dtype=t.long), concept
 
-	def __getitem__(self, i) -> Tuple[t.Tensor, t.Tensor]:
+	def __getitem__(self, i: int) -> Tuple[Float[Tensor, "batch color height width"], Int[Tensor, "batch"]]:
 		return self.instances[i], self.concepts[i]
 
 

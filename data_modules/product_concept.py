@@ -2,6 +2,8 @@
 
 from os.path import join
 from typing import Tuple
+from jaxtyping import Float, Int
+from torch import Tensor
 
 import lightning as l
 import numpy as np
@@ -47,19 +49,19 @@ class ProductConceptDataset(Dataset):
     def __len__(self) -> int:
         return len(self.concepts)
 
-    def add_offset(self, concepts: t.Tensor) -> t.Tensor:
+    def add_offset(self, concepts: Int[Tensor, "batch domain"]) -> Int[Tensor, "batch domain"]:
         return concepts + self.offsets
 
-    def remove_offset(self, concepts: t.Tensor) -> t.Tensor:
+    def remove_offset(self, concepts: Int[Tensor, "batch domain"]) -> Int[Tensor, "batch domain"]:
         return concepts - self.offsets
 
-    def decode_concept(self, concepts: t.Tensor) -> np.ndarray:
+    def decode_concept(self, concepts: Int[Tensor, "batch domain"]) -> Int[np.ndarray, "batch domain"]:
         return self.domain_properties.reshape(-1)[concepts.cpu().numpy()]
 
     def decode_domain(self, domain: int) -> str:
         return self.domains[domain]
 
-    def __getitem__(self, i) -> Tuple[t.Tensor, t.Tensor]:
+    def __getitem__(self, i) -> Tuple[Float[Tensor, "batch color height width"], Int[Tensor, "batch domain"]]:
         return self.instances[i], self.add_offset(self.concepts[i])
 
     def preprocess(
