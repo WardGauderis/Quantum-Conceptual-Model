@@ -23,28 +23,41 @@ class Hybrid(l.LightningModule):
     
     def configure_optimizers(self):
         return t.optim.Adam(self.parameters())
+    
+    def forward(self, x, y):
+        encoding = self.encoder(x)
+        decoding = self.decoder(encoding)
+        return decoding, y
+    
+    def loss(self, x, y, x_pred, y_pred):
+        
+        return nn.functional.mse_loss(x_pred, x) # + nn.functional.binary_cross_entropy(y_pred.float(), y.float())
         
     def training_step(self, batch, batch_idx):
         x, y = batch
-        encoding = self.encoder(x)
-        decoding = self.decoder(encoding)
-        loss = nn.functional.mse_loss(decoding, x)
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        x_pred, y_pred = self(x, y)
+        loss = self.loss(x, y, x_pred, y_pred)
+        self.log("train_loss", loss)
         return loss
     
-    # def validation_step(self, batch, batch_idx):
-    #     x, y = batch
-    #     y_pred = self(x)
-    #     loss = nn.functional.binary_cross_entropy(y_pred, y)
-    #     self.log("val_loss", loss)
-    #     return loss
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        x_pred, y_pred = self(x, y)
+        loss = self.loss(x, y, x_pred, y_pred)
+        self.log("val_loss", loss)
+        return loss
     
-    # def test_step(self, batch, batch_idx):
-    #     x, y = batch
-    #     y_pred = self(x)
-    #     loss = nn.functional.binary_cross_entropy(y_pred, y)
-    #     self.log("test_loss", loss)
-    #     return loss
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        x_pred, y_pred = self(x, y)
+        loss = self.loss(x, y, x_pred, y_pred)
+        self.log("test_loss", loss)
+        return loss
+    
+    def predict_step(self, batch, batch_idx):
+        x, y = batch
+        x_pred, y_pred = self(x, y)
+        return x_pred, y_pred
     
     
 

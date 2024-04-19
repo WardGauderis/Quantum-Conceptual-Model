@@ -3,14 +3,13 @@
 from os.path import join
 from typing import Tuple
 
+import lightning as l
 import numpy as np
 import torch as t
-import lightning as l
 from pandas import read_csv
 from skimage.io import imread_collection
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from torch.utils.data import DataLoader
 
 # %%
 
@@ -35,7 +34,7 @@ class ProductConceptDataset(Dataset):
         for column in self.concepts.columns:
             self.concepts[column] = self.concepts[column].cat.codes
 
-        self.concepts = t.tensor(self.concepts.values, dtype=t.long)
+        self.concepts = t.tensor(self.concepts.values)
 
         self.transform = transforms.Compose([transforms.ToTensor()])
 
@@ -43,9 +42,7 @@ class ProductConceptDataset(Dataset):
             [join(self.name, f"{i}.png") for i in range(len(self.concepts))],
             conserve_memory=False,
         )
-        self.instances = t.stack(
-            [self.transform(image) for image in self.instances]
-        )
+        self.instances = t.stack([self.transform(image) for image in self.instances])
 
     def __len__(self) -> int:
         return len(self.concepts)
@@ -64,6 +61,7 @@ class ProductConceptDataset(Dataset):
 
     def __getitem__(self, i) -> Tuple[t.Tensor, t.Tensor]:
         return self.instances[i], self.add_offset(self.concepts[i])
+
     def preprocess(
         self, x: t.Tensor, concept: t.Tensor
     ) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
@@ -103,7 +101,7 @@ class ProductConceptDataModule(l.LightningDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
-        
+
         self.num_workers = 4
         self.pin_memory = True
 
@@ -113,10 +111,29 @@ class ProductConceptDataModule(l.LightningDataModule):
         self.test = ProductConceptDataset(self.data_dir + "/test")
 
     def train_dataloader(self):
-        return DataLoader(self.train, self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
+        return DataLoader(
+            self.train,
+            self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val, len(self.val), num_workers=self.num_workers, pin_memory=self.pin_memory)
+        return DataLoader(
+            self.val,
+            len(self.val),
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test, len(self.test), num_workers=self.num_workers, pin_memory=self.pin_memory)
+        return DataLoader(
+            self.test,
+            len(self.test),
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+
+    def predict_dataloader(self):
+        return DataLoader(self.test)
