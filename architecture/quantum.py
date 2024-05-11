@@ -17,7 +17,7 @@ class VQC(nn.Module):
         embedding_dim = 12
         
         self.weights = nn.Embedding(num_concepts, embedding_dim, scale_grad_by_freq=True)
-        nn.init.uniform_(self.weights.weights, 0, 2 * torch.pi)
+        nn.init.uniform_(self.weights.weight, 0, 2 * torch.pi)
         
-    def forward(instance: Float[Tensor, "batch encoding"], concept: Int[Tensor, ""]) -> Float[Tensor, "batch label"]:
+    def forward(instance: Float[Tensor, "batch encoding"], concept: Int[Tensor, "batch domain"]) -> Float[Tensor, "batch label"]:
         return self.weights(instance)

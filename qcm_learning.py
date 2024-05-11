@@ -4,7 +4,6 @@ import lightning as l
 import matplotlib.pyplot as plt
 import torch as t
 from lightning.pytorch.callbacks import ModelCheckpoint
-from sympy import N
 
 from architecture import Hybrid
 from data_modules import ProductConceptDataModule
