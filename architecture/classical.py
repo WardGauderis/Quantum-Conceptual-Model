@@ -1,7 +1,5 @@
 #%%
 
-# TODO: dataclass
-
 # TODO: wandb + lightning
 
 # TODO: einops
@@ -15,13 +13,14 @@ from rich import print
 from rich.table import Table
 from torch import Tensor, nn
 from torchinfo import summary
+from data_modules import Config
 
 #%%
 
     
 
 class Encoder(nn.Module):
-	def __init__(self, output: int):
+	def __init__(self, config: Config):
 		super().__init__()
 
 		self.conv = nn.Sequential(
@@ -38,7 +37,7 @@ class Encoder(nn.Module):
 		self.dense = nn.Sequential(
 			nn.Linear(256, 256),
 			nn.ReLU(True),
-			nn.Linear(256, output),
+			nn.Linear(256, config.instance_embedding_dim),
 			# nn.ReLU(True),
 		)
 
@@ -59,11 +58,11 @@ class Encoder(nn.Module):
 #%%
 
 class Decoder(nn.Module):
-	def __init__(self, input: int):
+	def __init__(self, config: Config):
 		super().__init__()
 
 		self.dense = nn.Sequential(
-			nn.Linear(input, 256),
+			nn.Linear(config.instance_embedding_dim, 256),
 			nn.ReLU(True),
 			nn.Linear(256, 256),
 			nn.ReLU(True),

@@ -1,19 +1,20 @@
 # %%
 
 from os.path import join
-import re
 from typing import Tuple
-from jaxtyping import Float, Int
-from sympy import false
-from torch import Tensor
 
 import lightning as l
 import numpy as np
 import torch as t
+from jaxtyping import Float, Int
 from pandas import read_csv
 from skimage.io import imread_collection
+from sympy import false
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+
+from .config import Config
 
 # %%
 
@@ -27,12 +28,6 @@ class ProductConceptDataset(Dataset):
         self.domains = self.concepts.columns
         self.domain_properties = np.array(
             [self.concepts[column].cat.categories for column in self.domains]
-        )
-
-        self.num_properties = self.domain_properties.shape[1]
-        self.offsets = t.tensor(
-            [i * self.num_properties for i in range(len(self.domain_properties))],
-            dtype=t.int,
         )
 
         for column in self.concepts.columns:
@@ -51,16 +46,6 @@ class ProductConceptDataset(Dataset):
     def __len__(self) -> int:
         return len(self.concepts)
 
-    def add_offset(
-        self, concepts: Int[Tensor, "batch domain"]
-    ) -> Int[Tensor, "batch domain"]:
-        return concepts + self.offsets.to(concepts.device)
-
-    def remove_offset(
-        self, concepts: Int[Tensor, "batch domain"]
-    ) -> Int[Tensor, "batch domain"]:
-        return concepts - self.offsets.to(concepts.device)
-
     # def decode_concept(self, concepts: Int[Tensor, "batch domain"]) -> Int[np.ndarray, "batch domain"]:
     #     return self.domain_properties.reshape(-1)[concepts.cpu().numpy()]
 
@@ -70,31 +55,31 @@ class ProductConceptDataset(Dataset):
     def __getitem__(
         self, i
     ) -> Tuple[Float[Tensor, "color height width"], Int[Tensor, "domain"]]:
-        return self.instances[i], self.add_offset(self.concepts[i])
+        return self.instances[i], self.concepts[i]
 
-    def preprocess(
-        self, x: t.Tensor, concept: t.Tensor
-    ) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
-        false_concept = t.randint_like(
-            concept,
-            0,
-            self.num_properties - 1,
-            device=concept.device,
-            dtype=t.long,  # -1 to avoid the true concept
-        )
-        false_concept[false_concept >= self.remove_offset(concept)] += 1
-        false_concept = self.add_offset(false_concept)
+    # def preprocess(
+    #     self, x: t.Tensor, concept: t.Tensor
+    # ) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
+    #     false_concept = t.randint_like(
+    #         concept,
+    #         0,
+    #         self.config.num_properties - 1,
+    #         device=concept.device,
+    #         dtype=t.long,  # -1 to avoid the true concept
+    #     )
+    #     false_concept[false_concept >= self.config.remove_offset(concept)] += 1
+    #     false_concept = self.config.add_offset(false_concept)
 
-        x = t.cat([x, x])
-        concept = t.cat([concept, false_concept])
-        y = t.cat(
-            [
-                t.ones(x.shape[0] // 2, dtype=t.double, device=x.device),
-                t.zeros(x.shape[0] // 2, dtype=t.double, device=x.device),
-            ]
-        )
+    #     x = t.cat([x, x])
+    #     concept = t.cat([concept, false_concept])
+    #     y = t.cat(
+    #         [
+    #             t.ones(x.shape[0] // 2, dtype=t.double, device=x.device),
+    #             t.zeros(x.shape[0] // 2, dtype=t.double, device=x.device),
+    #         ]
+    #     )
 
-        return x, concept, y
+    #     return x, concept, y
 
 
 # %%
@@ -115,10 +100,13 @@ class ProductConceptDataModule(l.LightningDataModule):
         self.num_workers = 4
         self.pin_memory = True
 
-    def setup(self, stage: str):
         self.train = ProductConceptDataset(self.data_dir + "/train")
         self.val = ProductConceptDataset(self.data_dir + "/val")
         self.test = ProductConceptDataset(self.data_dir + "/test")
+
+        self.config = Config(
+            len(self.train.domains), self.train.domain_properties.shape[1], 12, 3
+        )
 
     def train_dataloader(self):
         return DataLoader(
@@ -168,10 +156,12 @@ class ProductConceptDataModule(l.LightningDataModule):
         false_concept = t.randint_like(
             concept,
             0,
-            self.train.num_properties - 1,  # -1 to avoid the true concept
+            self.config.num_properties - 1,  # -1 to avoid the true concept
         )
-        false_concept[false_concept >= self.train.remove_offset(concept)] += 1
-        false_concept = self.train.add_offset(false_concept)
+        false_concept[false_concept >= concept] += 1
+        
+        concept = self.config.add_offset(concept)
+        false_concept = self.config.add_offset(false_concept)
 
         instance = t.cat([instance, instance])
         concept = t.cat([concept, false_concept])

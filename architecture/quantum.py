@@ -1,12 +1,14 @@
 # %%
 
-import torch as t
-from torch import nn, Tensor
-import pennylane as qml
-import torch
-from jaxtyping import Float, Int
-from einops import rearrange, reduce, repeat
 from functools import partial
+
+import pennylane as qml
+import torch as t
+from einops import rearrange, reduce, repeat
+from jaxtyping import Float, Int
+from torch import Tensor, nn
+
+from data_modules import Config
 
 # %%
 
@@ -66,25 +68,21 @@ def circuit(
 
 
 class VQC(nn.Module):
-    def __init__(self):
+    def __init__(self, config: Config):
         super().__init__()
 
-        num_concepts = 12
-        num_domains = 4
-        embedding_dim = 3
-
         self.concept_weights = nn.Embedding(
-            num_concepts, embedding_dim, scale_grad_by_freq=True
+            config.num_domains * config.num_properties, config.concept_embedding_dim, scale_grad_by_freq=True
         )
-        nn.init.uniform_(self.concept_weights.weight, 0, 2 * torch.pi)
+        nn.init.uniform_(self.concept_weights.weight, 0, 2 * t.pi)
 
-        dev = qml.device("default.qubit", wires=num_domains)
-        self.circuit = qml.QNode(partial(circuit, num_domains), dev, interface="torch")
+        dev = qml.device("default.qubit", wires=config.num_domains)
+        self.circuit = qml.QNode(partial(circuit, config.num_domains), dev, interface="torch")
         # self.circuit = qml.compile(self.circuit)
 
     def forward(
         self, instance: Float[Tensor, "batch encoding"], concept_index: Int[Tensor, ""]
-    ) -> Float[Tensor, "batch label"]:
+    ) -> Float[Tensor, "batch domain"]:
         concept = rearrange(
             self.concept_weights(concept_index),
             "batch domain weights -> domain weights batch",
@@ -95,8 +93,8 @@ class VQC(nn.Module):
             instance, "batch (domain weights) -> domain weights batch", weights=3
         )
 
-        probabilities = torch.stack(self.circuit(instance, concept)) / 2 + 0.5
-        return reduce(probabilities, "probability batch -> batch", "prod")
+        probabilities = t.stack(self.circuit(instance, concept)) / 2 + 0.5
+        return rearrange(probabilities, "domain batch -> batch domain")
 
 
 # %%

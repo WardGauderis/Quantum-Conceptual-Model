@@ -1,7 +1,5 @@
 # %%
 
-# TODO: torch -> t
-
 import lightning as l
 import matplotlib.pyplot as plt
 import torch as t
@@ -16,11 +14,13 @@ t.set_float32_matmul_precision("high")
 
 shapes = ProductConceptDataModule("blackbird/data/shapes", 2**6)
 
+config = shapes.config
+
 # model = Hybrid.load_from_checkpoint(
 #     "lightning_logs/version_4/checkpoints/hybrid-epoch=99.ckpt"
 # )
 
-model = Hybrid()
+model = Hybrid(config)
 
 checkpoint = ModelCheckpoint(
     monitor="val_loss",

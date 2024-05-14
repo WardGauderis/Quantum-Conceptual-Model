@@ -1,2 +1,3 @@
 from data_modules.product_concept import ProductConceptDataModule
 from data_modules.entangled_concept import EntangledConceptDataModule
+from data_modules.config import Config
