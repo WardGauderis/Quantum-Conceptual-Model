@@ -1,8 +1,10 @@
 # %%
 
 from os.path import join
+import re
 from typing import Tuple
 from jaxtyping import Float, Int
+from sympy import false
 from torch import Tensor
 
 import lightning as l
@@ -36,7 +38,7 @@ class ProductConceptDataset(Dataset):
         for column in self.concepts.columns:
             self.concepts[column] = self.concepts[column].cat.codes
 
-        self.concepts = t.tensor(self.concepts.values)
+        self.concepts = t.tensor(self.concepts.values, dtype=t.long)
 
         self.transform = transforms.Compose([transforms.ToTensor()])
 
@@ -49,19 +51,25 @@ class ProductConceptDataset(Dataset):
     def __len__(self) -> int:
         return len(self.concepts)
 
-    def add_offset(self, concepts: Int[Tensor, "batch domain"]) -> Int[Tensor, "batch domain"]:
-        return concepts + self.offsets
+    def add_offset(
+        self, concepts: Int[Tensor, "batch domain"]
+    ) -> Int[Tensor, "batch domain"]:
+        return concepts + self.offsets.to(concepts.device)
 
-    def remove_offset(self, concepts: Int[Tensor, "batch domain"]) -> Int[Tensor, "batch domain"]:
-        return concepts - self.offsets
+    def remove_offset(
+        self, concepts: Int[Tensor, "batch domain"]
+    ) -> Int[Tensor, "batch domain"]:
+        return concepts - self.offsets.to(concepts.device)
 
-    def decode_concept(self, concepts: Int[Tensor, "batch domain"]) -> Int[np.ndarray, "batch domain"]:
-        return self.domain_properties.reshape(-1)[concepts.cpu().numpy()]
+    # def decode_concept(self, concepts: Int[Tensor, "batch domain"]) -> Int[np.ndarray, "batch domain"]:
+    #     return self.domain_properties.reshape(-1)[concepts.cpu().numpy()]
 
-    def decode_domain(self, domain: int) -> str:
-        return self.domains[domain]
+    # def decode_domain(self, domain: int) -> str:
+    #     return self.domains[domain]
 
-    def __getitem__(self, i) -> Tuple[Float[Tensor, "batch color height width"], Int[Tensor, "batch domain"]]:
+    def __getitem__(
+        self, i
+    ) -> Tuple[Float[Tensor, "color height width"], Int[Tensor, "domain"]]:
         return self.instances[i], self.add_offset(self.concepts[i])
 
     def preprocess(
@@ -139,3 +147,33 @@ class ProductConceptDataModule(l.LightningDataModule):
 
     def predict_dataloader(self):
         return DataLoader(self.test)
+
+    def on_after_batch_transfer(
+        self,
+        batch: Tuple[
+            Float[Tensor, "batch color height width"], Int[Tensor, "batch domain"]
+        ],
+        dataloader_idx: int,
+    ) -> Tuple[
+        Float[Tensor, "batch color height width"],
+        Int[Tensor, "batch domain"],
+        Float[Tensor, "batch label"],
+    ]:
+        instance, concept = batch
+        false_concept = t.randint_like(
+            concept,
+            0,
+            self.train.num_properties - 1,  # -1 to avoid the true concept
+        )
+        false_concept[false_concept >= self.train.remove_offset(concept)] += 1
+        false_concept = self.train.add_offset(false_concept)
+
+        instance = t.cat([instance, instance])
+        concept = t.cat([concept, false_concept])
+        label = t.cat(
+            [
+                t.ones(instance.shape[0] // 2, dtype=t.double, device=instance.device),
+                t.zeros(instance.shape[0] // 2, dtype=t.double, device=instance.device),
+            ]
+        )
+        return instance, concept, label

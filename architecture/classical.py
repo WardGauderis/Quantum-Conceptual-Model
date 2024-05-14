@@ -1,13 +1,14 @@
 #%%
 
-# dataclass
+# TODO: dataclass
 
-# wandb + lightning
+# TODO: wandb + lightning
+
+# TODO: einops
 
 
 from dataclasses import dataclass
 
-import einops
 import torch as t
 from jaxtyping import Float, Int
 from rich import print

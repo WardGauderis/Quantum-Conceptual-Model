@@ -1,5 +1,7 @@
 # %%
 
+#TODO: torch -> t
+
 import lightning as l
 import matplotlib.pyplot as plt
 import torch as t
