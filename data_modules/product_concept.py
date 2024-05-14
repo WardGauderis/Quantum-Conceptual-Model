@@ -146,7 +146,12 @@ class ProductConceptDataModule(l.LightningDataModule):
         )
 
     def predict_dataloader(self):
-        return DataLoader(self.test)
+        return DataLoader(
+            self.test,
+            batch_size=len(self.test),
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
 
     def on_after_batch_transfer(
         self,
