@@ -59,18 +59,11 @@ class Hybrid(l.LightningModule):
         self.log("train_loss", loss)
 
         return loss
-
-    def validation_step(self, batch, batch_idx) -> Float[Tensor, ""]:
-        x, index, y = batch
-        x_pred, y_pred = self(x, index)
-
-        loss = self.loss(x, y, x_pred, y_pred)
-        self.log("val_loss", loss, prog_bar=True)
-
-        accuracy = self.accuracy(y_pred, y)
-        self.log("val_accuracy", accuracy, prog_bar=True)
-
-        #
+    
+    def evaluate_indices(self, x, index):
+        # take first correct half of the batch
+        x = x[: x.shape[0] // 2]
+        index = index[: index.shape[0] // 2]
 
         all_indices = t.empty((*index.shape, self.config.num_properties), device=self.device)
         for i in range(self.config.num_properties):
@@ -83,8 +76,22 @@ class Hybrid(l.LightningModule):
             / index.shape[0]
         )
         
-        for i in range(self.config.num_domains):
-            self.log(f"val_index_accuracy_{i}", index_accuracy[i])
+        return index_accuracy
+
+    def validation_step(self, batch, batch_idx) -> Float[Tensor, ""]:
+        x, index, y = batch
+        x_pred, y_pred = self(x, index)
+
+        loss = self.loss(x, y, x_pred, y_pred)
+        self.log("val_loss", loss, prog_bar=True)
+        
+        if self.config.num_properties == 1:
+            accuracy = self.accuracy(y_pred, y)
+            self.log("val_accuracy", accuracy, prog_bar=True)
+        else:
+            index_accuracy = self.evaluate_indices(x, index)
+            for i in range(self.config.num_domains):
+                self.log(f"val_index_accuracy_{i}", index_accuracy[i], prog_bar=True)
 
         return loss
 
@@ -95,8 +102,13 @@ class Hybrid(l.LightningModule):
         loss = self.loss(x, y, x_pred, y_pred)
         self.log("test_loss", loss)
 
-        accuracy = self.accuracy(y_pred, y)
-        self.log("test_accuracy", accuracy)
+        if self.config.num_properties == 1:
+            accuracy = self.accuracy(y_pred, y)
+            self.log("val_accuracy", accuracy, prog_bar=True)
+        else:
+            index_accuracy = self.evaluate_indices(x, index)
+            for i in range(self.config.num_domains):
+                self.log(f"val_index_accuracy_{i}", index_accuracy[i], prog_bar=True)
 
         return loss
 
