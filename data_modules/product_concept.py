@@ -14,7 +14,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
-from .config import Config
+from ..utils.config import Config
 
 # %%
 
