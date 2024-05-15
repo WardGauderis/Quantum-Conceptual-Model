@@ -8,13 +8,13 @@ from jaxtyping import Int
 class Config:
     num_domains: int
     num_properties: int
-    instance_embedding_dim: int
     concept_embedding_dim: int
+    
+    decoder_multiplier: float = 0
 
-    def __init__(self, num_domains: int, num_properties: int, embedding_dim: int, concept_embedding_dim: int):
+    def __init__(self, num_domains: int, num_properties: int, concept_embedding_dim: int):
         self.num_domains = num_domains
         self.num_properties = num_properties
-        self.instance_embedding_dim = embedding_dim
         self.concept_embedding_dim = concept_embedding_dim
 
         self.offsets = t.tensor(

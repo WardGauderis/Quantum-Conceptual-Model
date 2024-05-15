@@ -26,8 +26,6 @@ class Hybrid(l.LightningModule):
 
         self.vqc = VQC(config)
 
-        self.decoder_weight = 0
-
         self.accuracy = BinaryAccuracy()
 
     def configure_optimizers(self) -> t.optim.Optimizer:
@@ -49,7 +47,7 @@ class Hybrid(l.LightningModule):
         y_pred = y_pred.clamp(0, 1)
         return (
             nn.functional.binary_cross_entropy(y_pred, y)
-            + nn.functional.mse_loss(x_pred, x) * self.decoder_weight
+            + nn.functional.mse_loss(x_pred, x) * self.config.decoder_multiplier
         )
 
     def training_step(self, batch, batch_idx) -> Float[Tensor, ""]:

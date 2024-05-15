@@ -105,7 +105,7 @@ class ProductConceptDataModule(l.LightningDataModule):
         self.test = ProductConceptDataset(self.data_dir + "/test")
 
         self.config = Config(
-            len(self.train.domains), self.train.domain_properties.shape[1], 12, 3
+            len(self.train.domains), self.train.domain_properties.shape[1], 3
         )
 
     def train_dataloader(self):
