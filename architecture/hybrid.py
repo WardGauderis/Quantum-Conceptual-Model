@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader
 from torchmetrics.classification import BinaryAccuracy
 from einops import reduce
 
-from data_modules import Config
+from utils import Config
 
-from . import VQC, Decoder, Encoder
+from architecture import VQC, Decoder, Encoder
 
 
 class Hybrid(l.LightningModule):

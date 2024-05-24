@@ -8,7 +8,7 @@ from einops import rearrange, reduce, repeat
 from jaxtyping import Float, Int
 from torch import Tensor, nn
 
-from data_modules import Config
+from utils import Config, circuit
 
 # %%
 

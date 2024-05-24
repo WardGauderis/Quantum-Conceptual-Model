@@ -14,13 +14,6 @@ from tqdm import tqdm
 
 t.set_float32_matmul_precision("high")
 
-checkpoint = ModelCheckpoint(
-    monitor="val_loss",
-    mode="min",
-    save_top_k=1,
-    filename="hybrid-{epoch:02d}",
-)
-
 
 class NoValidationBar(TQDMProgressBar):
     def init_validation_tqdm(self):
@@ -28,11 +21,25 @@ class NoValidationBar(TQDMProgressBar):
         return bar
 
 
+def trainer():
+    return l.Trainer(
+        max_epochs=100,
+        callbacks=[
+            ModelCheckpoint(
+                monitor="val_loss",
+                mode="min",
+                save_top_k=1,
+                filename="hybrid-{epoch:02d}",
+            ),
+            NoValidationBar(),
+        ],
+    )
+
 # %%
 
 shapes = ProductConceptDataModule("blackbird/data/shapes", 2**6)
 shapes_model = Hybrid(shapes.config)
-shapes_trainer = l.Trainer(max_epochs=100, callbacks=[checkpoint, NoValidationBar()])
+shapes_trainer = trainer()
 
 # %%
 
@@ -48,7 +55,7 @@ shapes_trainer.test(shapes_model, shapes)
 
 rainbow = ProductConceptDataModule("blackbird/data/rainbow", 2**6)
 rainbow_model = Hybrid(rainbow.config)
-rainbow_trainer = l.Trainer(max_epochs=100, callbacks=[checkpoint, NoValidationBar()])
+rainbow_trainer = trainer()
 
 # %%
 
@@ -65,7 +72,7 @@ rainbow_trainer.test(rainbow_model, rainbow)
 decoder_config = shapes.config
 decoder_config.decoder_multiplier = 1500
 decoder_model = Hybrid(shapes.config)
-decoder_trainer = l.Trainer(max_epochs=100, callbacks=[checkpoint, NoValidationBar()])
+decoder_trainer = trainer()
 
 # %%
 
@@ -77,13 +84,15 @@ decoder_trainer.validate(decoder_model, shapes)
 decoder_trainer.test(decoder_model, shapes)
 # TODO: visualise the results
 
-x_pred, y_pred = decoder_trainer.predict(shapes_model, shapes)[0]
+prediction = decoder_trainer.predict(shapes_model, shapes)
+if prediction is not None:
+    x_pred, y_pred = prediction[0]
 
-plt.imshow(x_pred[0].permute(1, 2, 0))
-plt.show()
+    plt.imshow(x_pred[0].permute(1, 2, 0))
+    plt.show()
 
-x = shapes.predict_dataloader().dataset[0]
-plt.imshow(x[0].permute(1, 2, 0))
+    x = shapes.predict_dataloader().dataset[0]
+    plt.imshow(x[0].permute(1, 2, 0))
 
 # %%
 

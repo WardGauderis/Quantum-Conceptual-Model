@@ -13,7 +13,7 @@ from rich import print
 from rich.table import Table
 from torch import Tensor, nn
 from torchinfo import summary
-from data_modules import Config
+from utils import Config
 
 #%%
 
