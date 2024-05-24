@@ -3,50 +3,47 @@ from functools import partial
 import pennylane as qml
 import qutip as qt
 import torch as t
-from circuits import concept_circuit, instance_circuit
+from einops import rearrange
 from jaxtyping import Float
 from torch import Tensor
+import numpy as np
 
-from einops import rearrange
+from utils.circuits import concept_circuit, instance_circuit
 
 dev = qml.device("default.qubit", wires=1)
 
 
-def instance_state(instance: Float[Tensor, "weights batch"]):
+def to_state(instance: Float[Tensor, "weights batch"]):
     instance_circuit(1, instance)
     return qml.state()
 
 
-def concept_state(concept: Float[Tensor, "weights batch"]):
-    concept_circuit(1, concept)
-    return qml.state()
+to_state = qml.QNode(to_state, dev, interface="torch")
 
-
-instance_state = qml.QNode(instance_state, dev, interface="torch")
-concept_state = qml.QNode(concept_state, dev, interface="torch")
-
-color_map = [
-    "red",
-    "blue",
-    "green",
-    "yellow",
-    "orange",
-    "purple",
-    "pink",
-    "brown",
-    "gray",
-    "olive",
-    "cyan",
-    "magenta",
-]
+color_map = np.array(
+    [
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "orange",
+        "purple",
+        "pink",
+        "brown",
+        "gray",
+        "olive",
+        "cyan",
+        "magenta",
+    ]
+)
 
 
 def plot_concepts(
-    b: qt.Bloch, concepts: Float[Tensor, "batch weights"], names: list[str]
+    b: qt.Bloch, concepts: Float[Tensor, "concept weights"], names: list[str]
 ):
-    concepts = rearrange(concepts, "batch weights -> weights batch")
+    concepts = rearrange(concepts, "concept weights -> 1 weights concept")
 
-    states = [qt.Qobj(s) for s in concept_state(concepts)]
+    states = [qt.Qobj(s) for s in to_state(concepts)]  # type: ignore
     b.add_states(states)
 
     for state, label, color in zip(states, names, color_map):
@@ -57,7 +54,7 @@ def plot_concepts(
                     qt.expect(qt.sigmay(), state),
                     qt.expect(qt.sigmaz(), state),
                 ]
-            )
+            ).numpy()
             * 1.2
         )
         b.add_annotation(state, label, color=color, fontsize=12)
@@ -68,25 +65,25 @@ def plot_instances(
     instances: Float[Tensor, "batch weights"],
     concepts: Float[Tensor, "batch"],
 ):
-    instances = rearrange(instances, "batch weights -> weights batch")
+    instances = rearrange(instances, "batch weights -> 1 weights batch")
 
     b.point_marker = ["o"]
-    b.point_color = color_map[concepts]
+    # b.point_color = list(color_map[concepts])
     b.point_size = [7]
 
-    states = [qt.Qobj(s) for s in instance_state(instances)]
-    b.add_states(states, kind="point", alpha=0.3)
+    states = [qt.Qobj(s) for s in to_state(instances)]  # type: ignore
+    b.add_states(states, kind="point", alpha=0.3, colors=list(color_map[concepts]))
 
 
 def plot_representations(
-    concepts: Float[Tensor, "batch weights"],
+    concepts: Float[Tensor, "concept weights"],
     instances: Float[Tensor, "batch weights"],
     instance_concepts: Float[Tensor, "batch"],
     concept_names: list[str],
 ):
     b = qt.Bloch(view=(-60, 30), figsize=(4, 4))
     b.font_size = 12
-    b.vector_color = color_map
+    b.vector_color = list(color_map)
 
     plot_concepts(b, concepts, concept_names)
     plot_instances(b, instances, instance_concepts)

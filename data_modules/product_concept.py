@@ -15,18 +15,23 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
 from utils import Config
+
 # %%
 
 
 class ProductConceptDataset(Dataset):
     def __init__(self, name: str):
-        self.name = name
-
         self.concepts = read_csv(join(name, "product_concepts.csv"), dtype="category")
 
-        self.domains = self.concepts.columns
-        self.domain_properties = np.array(
-            [self.concepts[column].cat.categories for column in self.domains]
+        self.config = Config(
+            np.array(self.concepts.columns),
+            np.array(
+                [
+                    self.concepts[column].cat.categories
+                    for column in self.concepts.columns
+                ]
+            ),
+            3,
         )
 
         for column in self.concepts.columns:
@@ -37,7 +42,7 @@ class ProductConceptDataset(Dataset):
         self.transform = transforms.Compose([transforms.ToTensor()])
 
         self.instances = imread_collection(
-            [join(self.name, f"{i}.png") for i in range(len(self.concepts))],
+            [join(name, f"{i}.png") for i in range(len(self.concepts))],
             conserve_memory=False,
         )
         self.instances = t.stack([self.transform(image) for image in self.instances])
@@ -45,49 +50,10 @@ class ProductConceptDataset(Dataset):
     def __len__(self) -> int:
         return len(self.concepts)
 
-    # def decode_concept(self, concepts: Int[Tensor, "batch domain"]) -> Int[np.ndarray, "batch domain"]:
-    #     return self.domain_properties.reshape(-1)[concepts.cpu().numpy()]
-
-    # def decode_domain(self, domain: int) -> str:
-    #     return self.domains[domain]
-
     def __getitem__(
         self, i
     ) -> Tuple[Float[Tensor, "color height width"], Int[Tensor, "domain"]]:
         return self.instances[i], self.concepts[i]
-
-    # def preprocess(
-    #     self, x: t.Tensor, concept: t.Tensor
-    # ) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
-    #     false_concept = t.randint_like(
-    #         concept,
-    #         0,
-    #         self.config.num_properties - 1,
-    #         device=concept.device,
-    #         dtype=t.long,  # -1 to avoid the true concept
-    #     )
-    #     false_concept[false_concept >= self.config.remove_offset(concept)] += 1
-    #     false_concept = self.config.add_offset(false_concept)
-
-    #     x = t.cat([x, x])
-    #     concept = t.cat([concept, false_concept])
-    #     y = t.cat(
-    #         [
-    #             t.ones(x.shape[0] // 2, dtype=t.double, device=x.device),
-    #             t.zeros(x.shape[0] // 2, dtype=t.double, device=x.device),
-    #         ]
-    #     )
-
-    #     return x, concept, y
-
-
-# %%
-
-if __name__ == "__main__":
-    dataset = ProductConceptDataset("data/shapes/val")
-    print(dataset.domain_properties)
-
-# %%
 
 
 class ProductConceptDataModule(l.LightningDataModule):
@@ -103,9 +69,7 @@ class ProductConceptDataModule(l.LightningDataModule):
         self.val = ProductConceptDataset(self.data_dir + "/val")
         self.test = ProductConceptDataset(self.data_dir + "/test")
 
-        self.config = Config(
-            len(self.train.domains), self.train.domain_properties.shape[1], 3
-        )
+        self.config = self.train.config
 
     def train_dataloader(self):
         return DataLoader(
@@ -152,13 +116,17 @@ class ProductConceptDataModule(l.LightningDataModule):
         Float[Tensor, "batch label"],
     ]:
         instance, concept = batch
+        
+        if self.trainer.predicting:
+            return instance, concept, t.ones(instance.shape[0], dtype=t.double)
+          
         false_concept = t.randint_like(
             concept,
             0,
             self.config.num_properties - 1,  # -1 to avoid the true concept
         )
         false_concept[false_concept >= concept] += 1
-        
+
         concept = self.config.add_offset(concept)
         false_concept = self.config.add_offset(false_concept)
 

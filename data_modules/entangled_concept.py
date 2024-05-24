@@ -17,8 +17,6 @@ from torchvision import transforms
 
 class EntangledConceptDataset(Dataset):
 	def __init__(self, name: str, concept_name: str):
-		self.name = name
-
 		match concept_name:
 			case "distribute_three":
 				filename = "distribute_three.csv"
@@ -60,13 +58,13 @@ class EntangledConceptDataset(Dataset):
 		self.concepts = t.tensor(concepts, dtype=t.long)
 
 		print(
-			f"Balance of {self.name}-{concept_name} dataset: {self.concepts.mean().item()} true"
+			f"Balance of {name}-{concept_name} dataset: {self.concepts.mean().item()} true"
 		)
 
 		self.transform = transforms.Compose([transforms.ToTensor()])
 
 		self.instances = imread_collection(
-			[join(self.name, f"{i}.png") for i in range(len(self.concepts))],
+			[join(name, f"{i}.png") for i in range(len(self.concepts))],
 			conserve_memory=False,
 		)
 		self.instances = t.stack([self.transform(image) for image in self.instances])

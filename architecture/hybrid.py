@@ -31,17 +31,17 @@ class Hybrid(l.LightningModule):
     def configure_optimizers(self) -> t.optim.Optimizer:
         return t.optim.Adam(self.parameters())
 
-    def forward(
-        self, x, index, product=True
-    ) -> Tuple[
-        Float[Tensor, "batch color height width"], Float[Tensor, "batch domain"]
+    def forward(self, x, index, product=True) -> Tuple[
+        Float[Tensor, "batch color height width"],
+        Float[Tensor, "batch domain"],
+        Float[Tensor, "batch domain weights"],
     ]:
         encoding = self.encoder(x)
         y_pred = self.vqc(encoding, index)
         if product:
             y_pred = reduce(y_pred, "batch domain -> batch", "prod")
         x_pred = self.decoder(encoding)
-        return x_pred, y_pred
+        return x_pred, y_pred, encoding
 
     def loss(self, x, y, x_pred, y_pred) -> Float[Tensor, ""]:
         y_pred = y_pred.clamp(0, 1)
@@ -52,73 +52,73 @@ class Hybrid(l.LightningModule):
 
     def training_step(self, batch, batch_idx) -> Float[Tensor, ""]:
         x, index, y = batch
-        x_pred, y_pred = self(x, index)
+        x_pred, y_pred, _ = self(x, index)
         loss = self.loss(x, y, x_pred, y_pred)
         self.log("train_loss", loss)
 
         return loss
-    
+
     def evaluate_indices(self, x, index):
         # take first correct half of the batch
         x = x[: x.shape[0] // 2]
         index = index[: index.shape[0] // 2]
 
-        all_indices = t.empty((*index.shape, self.config.num_properties), device=self.device)
+        all_indices = t.empty(
+            (*index.shape, self.config.num_properties), device=self.device
+        )
         for i in range(self.config.num_properties):
             fake_index = self.config.add_offset(t.full_like(index, i))
-            _, all_indices[..., i] = self(x, fake_index, product=False)
+            _, all_indices[..., i], _ = self(x, fake_index, product=False)
         index_pred = t.argmax(all_indices, dim=-1)
 
         index_accuracy = (
             t.sum(index_pred == self.config.remove_offset(index), dim=0)
             / index.shape[0]
         )
-        
+
         return index_accuracy
 
     def validation_step(self, batch, batch_idx) -> Float[Tensor, ""]:
         x, index, y = batch
-        x_pred, y_pred = self(x, index)
+        x_pred, y_pred, _ = self(x, index)
 
         loss = self.loss(x, y, x_pred, y_pred)
         self.log("val_loss", loss, prog_bar=True)
-        
+
         if self.config.num_properties == 1:
             accuracy = self.accuracy(y_pred, y)
             self.log("val_accuracy", accuracy, prog_bar=True)
         else:
             index_accuracy = self.evaluate_indices(x, index)
             for i in range(self.config.num_domains):
-                self.log(f"val_index_accuracy_{i}", index_accuracy[i], prog_bar=True)
+                self.log(f"val_accuracy_{i}", index_accuracy[i])
+            self.log("val_accuracy", t.mean(index_accuracy), prog_bar=True)
 
         return loss
 
     def test_step(self, batch, batch_idx) -> Float[Tensor, ""]:
         x, index, y = batch
-        x_pred, y_pred = self(x, index)
+        x_pred, y_pred, _ = self(x, index)
 
         loss = self.loss(x, y, x_pred, y_pred)
         self.log("test_loss", loss)
 
         if self.config.num_properties == 1:
             accuracy = self.accuracy(y_pred, y)
-            self.log("val_accuracy", accuracy, prog_bar=True)
+            self.log("test_accuracy", accuracy, prog_bar=True)
         else:
             index_accuracy = self.evaluate_indices(x, index)
             for i in range(self.config.num_domains):
-                self.log(f"val_index_accuracy_{i}", index_accuracy[i], prog_bar=True)
+                self.log(f"test_accuracy_{i}", index_accuracy[i])
+            self.log("test_accuracy", t.mean(index_accuracy), prog_bar=True)
 
         return loss
 
-    def predict_step(
-        self, batch, batch_idx
-    ) -> Tuple[Float[Tensor, "batch color height width"], Float[Tensor, "batch label"]]:
+    def predict_step(self, batch, batch_idx) -> Tuple[
+        Float[Tensor, "batch color height width"],
+        Float[Tensor, "batch label"],
+        Float[Tensor, "batch domain weights"],
+    ]:
         x, index, y = batch
-        x_pred, y_pred = self(x, index)
-        return x_pred, y_pred
-
-
-if __name__ == "__main__":
-    model = Hybrid()
-    model.cuda()
-    print(model.device)
+        x_pred, y_pred, encoding = self(x, index)
+        return x_pred, y_pred, encoding
