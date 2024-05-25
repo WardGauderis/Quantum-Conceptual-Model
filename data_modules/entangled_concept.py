@@ -5,6 +5,7 @@ from typing import Tuple
 import lightning as l
 import numpy as np
 import torch as t
+from einops import pack, rearrange
 from jaxtyping import Float, Int
 from pandas import read_csv
 from skimage.io import imread_collection
@@ -12,144 +13,186 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
+from utils import Config
+
 # %%
 
 
 class EntangledConceptDataset(Dataset):
-	def __init__(self, name: str, concept_name: str):
-		match concept_name:
-			case "distribute_three":
-				filename = "distribute_three.csv"
-			case "progression":
-				filename = "progression.csv"
-			case "blackbird":
-				filename = "blackbird.csv"
-			case _:
-				filename = "product_concepts.csv"
+    def __init__(self, name: str, concept_name: str):
+        match concept_name:
+            case "distribute_three":
+                filename = "distribute_three.csv"
+            case "progression":
+                filename = "progression.csv"
+            case "blackbird":
+                filename = "blackbird.csv"
+            case _:
+                filename = "product_concepts.csv"
 
-		concepts = read_csv(join(name, filename), dtype="category")
-
-		match concept_name:
-			case "twike":
-				concepts = (
-					(concepts["color"] == "red")
-					& (concepts["shape"] == "circle")
-				) | (
-					(concepts["color"] == "blue")
-					& (concepts["shape"] == "square")
-				)
-			case "red":
-				concepts = concepts["color"] == "red"
-			case "red_and_circle":
-				concepts = (concepts["color"] == "red") & (
-					concepts["shape"] == "circle"
-				)
-			case "red__or_blue":
-				concepts = (concepts["color"] == "red") | (
-					concepts["color"] == "blue"
-				)
-			case "red_or_circle":
-				concepts = (concepts["color"] == "red") | (
-					concepts["shape"] == "circle"
-				)
-			case "blackbird":
-				concepts = concepts["correct"]
-
-		self.concepts = t.tensor(concepts, dtype=t.long)
-
-		print(
-			f"Balance of {name}-{concept_name} dataset: {self.concepts.mean().item()} true"
+        concepts = read_csv(join(name, filename), dtype="category")
+        
+        self.config = Config(
+            np.array(concepts.columns),
+			np.array(
+                [
+                    concepts[column].cat.categories
+                    for column in concepts.columns
+                ]
+            ),
+			12,
 		)
 
-		self.transform = transforms.Compose([transforms.ToTensor()])
+        match concept_name:
+            case "correlated":
+                concepts = (
+                    (concepts["color"] == "red") & (concepts["shape"] == "circle")
+                ) | ((concepts["color"] == "blue") & (concepts["shape"] == "square"))
+            case "red":
+                concepts = concepts["color"] == "red"
+            case "red_and_circle":
+                concepts = (concepts["color"] == "red") & (
+                    concepts["shape"] == "circle"
+                )
+            case "red_or_blue":
+                concepts = (concepts["color"] == "red") | (concepts["color"] == "blue")
+            case "red_or_circle":
+                concepts = (concepts["color"] == "red") | (
+                    concepts["shape"] == "circle"
+                )
+            case "blackbird":
+                concepts = concepts["correct"]
 
-		self.instances = imread_collection(
-			[join(name, f"{i}.png") for i in range(len(self.concepts))],
-			conserve_memory=False,
-		)
-		self.instances = t.stack([self.transform(image) for image in self.instances])
+        self.concepts = t.tensor(concepts, dtype=t.long)
 
-		if concept_name == "progression":  # Make puzzles column-major
-			self.instances = self.instances.reshape(-1, 3, 3, 3, 64, 64).transpose(2, 1)
-		if concept_name == "distribute_three" or concept_name == "progression":
-			self.instances = self.instances.reshape(len(self.concepts), 3, 3, 64, 64)
-		elif concept_name == "blackbird":
-			self.instances = self.instances.reshape(len(self.concepts), 9, 3, 64, 64)
+        print(
+            f"Balance of {name}-{concept_name} dataset: {self.concepts.mean().item()} true"
+        )
 
-	def __len__(self) -> int:
-		return len(self.concepts)
+        transform = transforms.Compose([transforms.ToTensor()])
 
-	def preprocess(
-		self, x: t.Tensor, concept: t.Tensor
-	) -> Tuple[t.Tensor, t.Tensor, t.Tensor]:
-		return x, t.zeros_like(concept, dtype=t.long), concept
+        self.instances = imread_collection(
+            [join(name, f"{i}.png") for i in range(len(self.concepts))],
+            conserve_memory=False,
+        )
+        self.instances = pack(
+            [transform(image) for image in self.instances], "* color height width"
+        )[0]
 
-	def __getitem__(self, i: int) -> Tuple[Float[Tensor, "batch color height width"], Int[Tensor, "batch"]]:
-		return self.instances[i], self.concepts[i]
+        if concept_name == "progression":  # Make puzzles column-major
+            self.instances = rearrange(
+                self.instances,
+                "(batch row column) color height width -> (batch column) row color height width",
+                row=3,
+                column=3,
+            )
+        elif concept_name == "distribute_three":
+            self.instances = rearrange(
+                self.instances,
+                "(batch row column) color height width -> (batch row) column color height width",
+                row=3,
+                column=3,
+            )
+        elif concept_name == "blackbird":
+            self.instances = rearrange(
+                self.instances,
+                "(batch puzzles) color height width -> batch puzzles color height width",
+                puzzles=9,
+            )
+
+    def __len__(self) -> int:
+        return len(self.concepts)
+
+    def __getitem__(
+        self, i: int
+    ) -> Tuple[Float[Tensor, "batch color height width"], Int[Tensor, "batch"]]:
+        return self.instances[i], self.concepts[i]
 
 
 # %%
 
 if __name__ == "__main__":
-	# twike
+    # correlated
 
-	dataset = EntangledConceptDataset("data/shapes/val", "twike")
-	print(len(dataset))
+    dataset = EntangledConceptDataset("data/shapes/val", "correlated")
+    print(len(dataset))
 
-	# rows
+    # rows
 
-	dataset = EntangledConceptDataset("data/blackbird/val", "distribute_three")
-	print(len(dataset))
+    dataset = EntangledConceptDataset("data/blackbird/val", "distribute_three")
+    print(len(dataset))
 
-	x, y = dataset[3]
-	print(x.shape, y.shape)
+    x, y = dataset[3]
+    print(x.shape, y.shape)
 
-	import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
 
-	fig, ax = plt.subplots(1, 3)
-	for i in range(3):
-		ax[i].imshow(x[i].permute(1, 2, 0))
-		ax[i].axis("off")
-	plt.show()
+    fig, ax = plt.subplots(1, 3)
+    for i in range(3):
+        ax[i].imshow(x[i].permute(1, 2, 0))
+        ax[i].axis("off")
+    plt.show()
 
-	# blackbird
+    # blackbird
 
-	dataset = EntangledConceptDataset("data/blackbird/val", "blackbird")
-	print(len(dataset))
+    dataset = EntangledConceptDataset("data/blackbird/val", "blackbird")
+    print(len(dataset))
 
-	x, y = dataset[0]
-	print(y)
+    x, y = dataset[0]
+    print(y)
 
-	fig, ax = plt.subplots(3, 3)
-	for i in range(3):
-		for j in range(3):
-			ax[i, j].imshow(x[3 * i + j].permute(1, 2, 0))
-	plt.show()
-
-
-# %%
+    fig, ax = plt.subplots(3, 3)
+    for i in range(3):
+        for j in range(3):
+            ax[i, j].imshow(x[3 * i + j].permute(1, 2, 0))
+    plt.show()
 
 
 class EntangledConceptDataModule(l.LightningDataModule):
-	def __init__(self, data_dir: str, type: str, batch_size: int):
-		super().__init__()
-		self.data_dir = data_dir
-		self.type = type
-		self.batch_size = batch_size
+    def __init__(self, data_dir: str, type: str, batch_size: int):
+        super().__init__()
+        self.data_dir = data_dir
+        self.type = type
+        self.batch_size = batch_size
 
-		self.num_workers = 4
-		self.pin_memory = True
+        self.num_workers = 4
+        self.pin_memory = True
 
-	def setup(self, stage: str):
-		self.train = EntangledConceptDataset(self.data_dir + "/train", self.type)
-		self.val = EntangledConceptDataset(self.data_dir + "/val", self.type)
-		self.test = EntangledConceptDataset(self.data_dir + "/test", self.type)
+        self.train = EntangledConceptDataset(self.data_dir + "/train", self.type)
+        self.val = EntangledConceptDataset(self.data_dir + "/val", self.type)
+        self.test = EntangledConceptDataset(self.data_dir + "/test", self.type)
 
-	def train_dataloader(self):
-		return DataLoader(self.train, self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
+        self.config = self.train.config
 
-	def val_dataloader(self):
-		return DataLoader(self.val, len(self.val), num_workers=self.num_workers, pin_memory=self.pin_memory)
+    def train_dataloader(self):
+        return DataLoader(
+            self.train,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
 
-	def test_dataloader(self):
-		return DataLoader(self.test, len(self.test), num_workers=self.num_workers, pin_memory=self.pin_memory)
+    def val_dataloader(self):
+        return DataLoader(
+            self.val,
+            batch_size=len(self.val),
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.test,
+            batch_size=len(self.test),
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+        
+    def predict_dataloader(self):
+    	return DataLoader(
+			self.test,
+			batch_size=len(self.test),
+			num_workers=self.num_workers,
+			pin_memory=self.pin_memory,
+		)

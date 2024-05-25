@@ -14,6 +14,8 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
+from einops import repeat, pack
+
 from utils import Config
 
 # %%
@@ -39,13 +41,13 @@ class ProductConceptDataset(Dataset):
 
         self.concepts = t.tensor(self.concepts.values, dtype=t.long)
 
-        self.transform = transforms.Compose([transforms.ToTensor()])
+        transform = transforms.Compose([transforms.ToTensor()])
 
-        self.instances = imread_collection(
+        instances = imread_collection(
             [join(name, f"{i}.png") for i in range(len(self.concepts))],
             conserve_memory=False,
         )
-        self.instances = t.stack([self.transform(image) for image in self.instances])
+        self.instances = pack([transform(image) for image in instances], "* color height width")[0]
 
     def __len__(self) -> int:
         return len(self.concepts)
@@ -74,7 +76,7 @@ class ProductConceptDataModule(l.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.train,
-            self.batch_size,
+            batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
@@ -83,7 +85,7 @@ class ProductConceptDataModule(l.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.val,
-            len(self.val),
+            batch_size=len(self.val),
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
         )
@@ -91,7 +93,7 @@ class ProductConceptDataModule(l.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(
             self.test,
-            len(self.test),
+            batch_size=len(self.test),
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
         )
@@ -116,26 +118,35 @@ class ProductConceptDataModule(l.LightningDataModule):
         Float[Tensor, "batch label"],
     ]:
         instance, concept = batch
-        
-        if self.trainer.predicting:
+
+        if self.trainer.predicting:  # type: ignore
             return instance, concept, t.ones(instance.shape[0], dtype=t.double)
-          
+
+        num_negatives = 1
+
+        true_concept = repeat(
+            concept, "batch domain -> (copies batch) domain", copies=num_negatives
+        )
+
         false_concept = t.randint_like(
-            concept,
+            true_concept,
             0,
             self.config.num_properties - 1,  # -1 to avoid the true concept
         )
-        false_concept[false_concept >= concept] += 1
+        false_concept[false_concept >= true_concept] += 1
 
-        concept = self.config.add_offset(concept)
-        false_concept = self.config.add_offset(false_concept)
-
-        instance = t.cat([instance, instance])
-        concept = t.cat([concept, false_concept])
-        label = t.cat(
-            [
-                t.ones(instance.shape[0] // 2, dtype=t.double, device=instance.device),
-                t.zeros(instance.shape[0] // 2, dtype=t.double, device=instance.device),
-            ]
+        new_instance = repeat(
+            instance,
+            "batch color height width -> (copies batch) color height width",
+            copies=num_negatives + 1,
         )
-        return instance, concept, label
+        new_concept = pack([concept, false_concept], "* domain")[0]
+        new_concept = self.config.add_offset(new_concept)
+        new_label = pack(
+            [
+                t.ones(concept.shape[0], dtype=t.double, device=instance.device),
+                t.zeros(false_concept.shape[0], dtype=t.double, device=instance.device),
+            ],
+            "*",
+        )[0]
+        return new_instance, new_concept, new_label
