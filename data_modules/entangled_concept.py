@@ -64,7 +64,7 @@ class EntangledConceptDataset(Dataset):
             case "blackbird":
                 concepts = concepts["correct"]
 
-        self.concepts = t.tensor(concepts, dtype=t.long)
+        self.concepts = t.tensor(concepts, dtype=t.double)
         self.config.concept_domains = np.array(domains)
 
         print(

@@ -157,9 +157,9 @@ correlated_trainer.fit(correlated_model, correlated)
 
 # %%
 
-correlated_model = Hybrid.load_from_checkpoint(
-    correlated_trainer.checkpoint_callback.best_model_path  # type: ignore
-)
+# correlated_model = Hybrid.load_from_checkpoint(
+#     correlated_trainer.checkpoint_callback.best_model_path  # type: ignore
+# )
 
 correlated_trainer.validate(correlated_model, correlated)
 correlated_trainer.test(correlated_model, correlated)

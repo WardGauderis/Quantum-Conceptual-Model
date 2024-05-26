@@ -36,7 +36,8 @@ def entangled_concept_circuit(
 
 def create_circuit(
     type: str,
-    domains: list[int],
+    instance_domains: list[int],
+    concept_domains: list[int],
 ):
     match type:
         case "product_concept":
@@ -45,10 +46,10 @@ def create_circuit(
                 instance: Float[Tensor, "domain weights batch"],
                 concept: Float[Tensor, "domain weights batch"],
             ):
-                instance_circuit(domains, instance)
-                product_concept_circuit(domains, concept)
+                instance_circuit(instance_domains, instance)
+                product_concept_circuit(concept_domains, concept)
 
-                return [qml.expval(qml.PauliZ(w)) for w in domains]
+                return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
 
         case "entangled_concept":
 
@@ -56,10 +57,10 @@ def create_circuit(
                 instance: Float[Tensor, "domain weights batch"],
                 concept: Float[Tensor, "repeat domain batch"],
             ):
-                instance_circuit(domains, instance)
-                entangled_concept_circuit(domains, concept)
+                instance_circuit(instance_domains, instance)
+                entangled_concept_circuit(concept_domains, concept)
 
-                return [qml.expval(qml.PauliZ(w)) for w in domains]
+                return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
 
     return circuit
 

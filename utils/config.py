@@ -43,6 +43,10 @@ class Config:
     @property
     def num_properties(self) -> int:
         return self.properties.shape[1]
+    
+    @property
+    def num_concepts(self) -> int:
+        return self.num_domains * self.num_properties if self.is_product_concept else 1
 
     @property
     def is_product_concept(self) -> bool:
@@ -57,6 +61,10 @@ class Config:
         return [
             i for i, domain in enumerate(self.domains) if domain in self.concept_domains
         ]
+        
+    @property
+    def instance_domain_indices(self) -> list[int]:
+        return list(range(self.num_domains))
         
     @property
     def num_concept_domains(self) -> int:

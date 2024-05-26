@@ -18,7 +18,7 @@ class VQC(nn.Module):
         super().__init__()
 
         self.concept_weights = nn.Embedding(
-            config.num_domains * config.num_properties,
+            config.num_concepts,
             config.concept_embedding_dim,
             scale_grad_by_freq=True,
         )
@@ -26,7 +26,11 @@ class VQC(nn.Module):
 
         dev = qml.device("default.qubit", wires=config.num_domains)
         self.circuit = qml.QNode(
-            create_circuit(config.concept_type, config.concept_domain_indices),
+            create_circuit(
+                config.concept_type,
+                config.instance_domain_indices,
+                config.concept_domain_indices,
+            ),
             dev,
             interface="torch",
             diff_method="backprop",
@@ -43,7 +47,7 @@ class VQC(nn.Module):
         if concept_index is None:
             concept = rearrange(
                 self.concept_weights.weight,
-                "(repeat domain weights) -> repeat domain weights",
+                "none (repeat domain weights) -> (none repeat) domain weights",
                 domain=self.num_concept_domains,
                 weights=3,
             )
@@ -52,7 +56,7 @@ class VQC(nn.Module):
                 self.concept_weights(concept_index),
                 "batch domain weights -> domain weights batch",
             )
-            
+
         instance = rearrange(instance, "batch domain weights -> domain weights batch")
 
         probabilities = t.stack(self.circuit(instance, concept)) / 2 + 0.5
