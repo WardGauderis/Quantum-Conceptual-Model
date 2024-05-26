@@ -33,6 +33,7 @@ class ProductConceptDataset(Dataset):
                     for column in self.concepts.columns
                 ]
             ),
+            "product_concept",
             3,
         )
 

@@ -78,41 +78,26 @@ class Hybrid(l.LightningModule):
 
         return index_accuracy
 
-    def validation_step(self, batch, batch_idx) -> Float[Tensor, ""]:
+    def validation_step(self, batch, batch_idx, name="val") -> Float[Tensor, ""]:
         x, index, y = batch
         x_pred, y_pred, _ = self(x, index)
 
         loss = self.loss(x, y, x_pred, y_pred)
-        self.log("val_loss", loss, prog_bar=True)
+        self.log(f"{name}_loss", loss, prog_bar=True)
 
-        if self.config.num_properties == 1:
-            accuracy = self.accuracy(y_pred, y)
-            self.log("val_accuracy", accuracy, prog_bar=True)
-        else:
+        if self.config.is_product_concept:
             index_accuracy = self.evaluate_indices(x, index)
             for i in range(self.config.num_domains):
-                self.log(f"val_accuracy_{i}", index_accuracy[i])
-            self.log("val_accuracy", t.mean(index_accuracy), prog_bar=True)
+                self.log(f"{name}_accuracy_{i}", index_accuracy[i])
+            self.log(f"{name}_accuracy", t.mean(index_accuracy), prog_bar=True)
+        else:
+            accuracy = self.accuracy(y_pred, y)
+            self.log(f"{name}_accuracy", accuracy, prog_bar=True)
 
         return loss
 
     def test_step(self, batch, batch_idx) -> Float[Tensor, ""]:
-        x, index, y = batch
-        x_pred, y_pred, _ = self(x, index)
-
-        loss = self.loss(x, y, x_pred, y_pred)
-        self.log("test_loss", loss)
-
-        if self.config.num_properties == 1:
-            accuracy = self.accuracy(y_pred, y)
-            self.log("test_accuracy", accuracy, prog_bar=True)
-        else:
-            index_accuracy = self.evaluate_indices(x, index)
-            for i in range(self.config.num_domains):
-                self.log(f"test_accuracy_{i}", index_accuracy[i])
-            self.log("test_accuracy", t.mean(index_accuracy), prog_bar=True)
-
-        return loss
+        return self.validation_step(batch, batch_idx, name="test")
 
     def predict_step(self, batch, batch_idx) -> Tuple[
         Float[Tensor, "batch color height width"],

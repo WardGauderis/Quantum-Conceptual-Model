@@ -85,7 +85,7 @@ try:
     )
 except IsADirectoryError:
     shapes_model = Hybrid.load_from_checkpoint(
-        "lightning_logs/shapes/checkpoints/shapes-loss-epoch=72.ckpt"
+        "lightning_logs/shapes/checkpoints/shapes-loss-epoch=70.ckpt"
     )
         
 shapes_trainer.validate(shapes_model, shapes)
@@ -158,7 +158,7 @@ correlated_trainer.fit(correlated_model, correlated)
 # %%
 
 correlated_model = Hybrid.load_from_checkpoint(
-    rainbow_trainer.checkpoint_callback.best_model_path  # type: ignore
+    correlated_trainer.checkpoint_callback.best_model_path  # type: ignore
 )
 
 correlated_trainer.validate(correlated_model, correlated)

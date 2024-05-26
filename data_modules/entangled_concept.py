@@ -31,42 +31,44 @@ class EntangledConceptDataset(Dataset):
                 filename = "product_concepts.csv"
 
         concepts = read_csv(join(name, filename), dtype="category")
-        
+
         self.config = Config(
             np.array(concepts.columns),
-			np.array(
-                [
-                    concepts[column].cat.categories
-                    for column in concepts.columns
-                ]
-            ),
-			12,
-		)
+            np.array([concepts[column].cat.categories for column in concepts.columns]),
+            "entangled_concept",
+            12,
+        )
 
         match concept_name:
             case "correlated":
                 concepts = (
                     (concepts["color"] == "red") & (concepts["shape"] == "circle")
                 ) | ((concepts["color"] == "blue") & (concepts["shape"] == "square"))
+                domains = ["color", "shape"]
             case "red":
                 concepts = concepts["color"] == "red"
+                domains = ["color"]
             case "red_and_circle":
                 concepts = (concepts["color"] == "red") & (
                     concepts["shape"] == "circle"
                 )
+                domains = ["color", "shape"]
             case "red_or_blue":
                 concepts = (concepts["color"] == "red") | (concepts["color"] == "blue")
+                domains = ["color"]
             case "red_or_circle":
                 concepts = (concepts["color"] == "red") | (
                     concepts["shape"] == "circle"
                 )
+                domains = ["color", "shape"]
             case "blackbird":
                 concepts = concepts["correct"]
 
         self.concepts = t.tensor(concepts, dtype=t.long)
+        self.config.concept_domains = np.array(domains)
 
         print(
-            f"Balance of {name}-{concept_name} dataset: {self.concepts.mean().item()} true"
+            f"Balance of {name}-{concept_name} dataset: {self.concepts.float().mean().item()} true"
         )
 
         transform = transforms.Compose([transforms.ToTensor()])
@@ -188,11 +190,25 @@ class EntangledConceptDataModule(l.LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
         )
-        
+
     def predict_dataloader(self):
-    	return DataLoader(
-			self.test,
-			batch_size=len(self.test),
-			num_workers=self.num_workers,
-			pin_memory=self.pin_memory,
-		)
+        return DataLoader(
+            self.test,
+            batch_size=len(self.test),
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+
+    def on_after_batch_transfer(
+        self,
+        batch: Tuple[
+            Float[Tensor, "batch color height width"], Int[Tensor, "batch domain"]
+        ],
+        dataloader_idx: int,
+    ) -> Tuple[
+        Float[Tensor, "batch color height width"],
+        None,
+        Float[Tensor, "batch label"],
+    ]:
+        instance, concept = batch
+        return instance, None, concept

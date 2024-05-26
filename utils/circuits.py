@@ -36,11 +36,8 @@ def entangled_concept_circuit(
 
 def create_circuit(
     type: str,
-    domains: int | list[int],
+    domains: list[int],
 ):
-    if isinstance(domains, int):
-        domains = list(range(domains))
-
     match type:
         case "product_concept":
 
@@ -51,30 +48,30 @@ def create_circuit(
                 instance_circuit(domains, instance)
                 product_concept_circuit(domains, concept)
 
-                [qml.expval(qml.PauliZ(w)) for w in domains]
+                return [qml.expval(qml.PauliZ(w)) for w in domains]
 
-        case "correlated":
+        case "entangled_concept":
 
             def circuit(
                 instance: Float[Tensor, "domain weights batch"],
                 concept: Float[Tensor, "repeat domain batch"],
             ):
                 instance_circuit(domains, instance)
-                product_concept_circuit(domains, concept)
+                entangled_concept_circuit(domains, concept)
 
-                [qml.expval(qml.PauliZ(w)) for w in domains]
+                return [qml.expval(qml.PauliZ(w)) for w in domains]
 
     return circuit
 
 
 # %%
 
-# return [qml.probs(wires=w) for w in range(num_domains)]
-# return qml.probs(wires=range(num_domains))
+# # return [qml.probs(wires=w) for w in range(num_domains)]
+# # return qml.probs(wires=range(num_domains))
 
 # dev = qml.device("default.qubit", wires=4)
 
-# c = partial(circuit, 4)
+# c = create_circuit("entangled_concept", 4)
 
 # # c = qml.compile()(circuit)
 # c = qml.QNode(c, dev, interface="torch", diff_method="backprop", cachesize=40000)
@@ -90,7 +87,7 @@ def create_circuit(
 # params = t.randn(4, 3, 10, device="cuda")
 # # params = repeat(params, "domain weights -> domain weights batch", batch=10)
 # params2 = t.randn(4, 3, 10, device="cuda")
-# params2 = t.randn(4, 4, 3, device="cuda")
+# params2 = t.randn(5, 4, 3, device="cuda")
 
 # t.stack(c(params, params2)) / 2 + 0.5
 

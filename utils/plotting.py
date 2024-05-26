@@ -8,13 +8,13 @@ from jaxtyping import Float
 from torch import Tensor
 import numpy as np
 
-from utils.circuits import concept_circuit, instance_circuit
+from utils.circuits import instance_circuit
 
 dev = qml.device("default.qubit", wires=1)
 
 
 def to_state(instance: Float[Tensor, "weights batch"]):
-    instance_circuit(1, instance)
+    instance_circuit([0], instance)
     return qml.state()
 
 

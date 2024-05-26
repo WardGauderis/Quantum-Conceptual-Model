@@ -11,16 +11,24 @@ class Config:
     domains: np.ndarray
     properties: np.ndarray
 
+    concept_type: str
+    concept_domains: np.ndarray
     concept_embedding_dim: int
 
     decoder_multiplier: float = 0
 
     def __init__(
-        self, domains: np.ndarray, properties: np.ndarray, concept_embedding_dim: int
+        self,
+        domains: np.ndarray,
+        properties: np.ndarray,
+        concept_type: str,
+        concept_embedding_dim: int,
     ):
         self.domains = domains
         self.properties = properties
 
+        self.concept_type = concept_type
+        self.concept_domains = domains
         self.concept_embedding_dim = concept_embedding_dim
 
         self.offsets = t.tensor(
@@ -35,6 +43,24 @@ class Config:
     @property
     def num_properties(self) -> int:
         return self.properties.shape[1]
+
+    @property
+    def is_product_concept(self) -> bool:
+        return self.concept_type == "product_concept"
+
+    @property
+    def is_entangled_concept(self) -> bool:
+        return self.concept_type == "entangled_concept"
+
+    @property
+    def concept_domain_indices(self) -> list[int]:
+        return [
+            i for i, domain in enumerate(self.domains) if domain in self.concept_domains
+        ]
+        
+    @property
+    def num_concept_domains(self) -> int:
+        return len(self.concept_domains)
 
     def add_offset(
         self, concepts: Int[Tensor, "batch domain"]
