@@ -50,14 +50,6 @@ class Hybrid(l.LightningModule):
             + nn.functional.mse_loss(x_pred, x) * self.config.decoder_multiplier
         )
 
-    def training_step(self, batch, batch_idx) -> Float[Tensor, ""]:
-        x, index, y = batch
-        x_pred, y_pred, _ = self(x, index)
-        loss = self.loss(x, y, x_pred, y_pred)
-        self.log("train_loss", loss)
-
-        return loss
-
     def evaluate_indices(self, x, index):
         # take first correct half of the batch
         x = x[: x.shape[0] // 2]
@@ -77,14 +69,14 @@ class Hybrid(l.LightningModule):
         )
 
         return index_accuracy
-
-    def validation_step(self, batch, batch_idx, name="val") -> Float[Tensor, ""]:
+    
+    def step(self, batch, name: str) -> Float[Tensor, ""]:
         x, index, y = batch
         x_pred, y_pred, _ = self(x, index)
-
         loss = self.loss(x, y, x_pred, y_pred)
         self.log(f"{name}_loss", loss, prog_bar=True)
-
+        
+        
         if self.config.is_product_concept:
             index_accuracy = self.evaluate_indices(x, index)
             for i in range(self.config.num_instance_domains):
@@ -93,11 +85,17 @@ class Hybrid(l.LightningModule):
         else:
             accuracy = self.accuracy(y_pred, y)
             self.log(f"{name}_accuracy", accuracy, prog_bar=True)
-
+        
         return loss
 
+    def training_step(self, batch, batch_idx) -> Float[Tensor, ""]:
+        return self.step(batch, "train")
+        
+    def validation_step(self, batch, batch_idx) -> Float[Tensor, ""]:
+        return self.step(batch, "val")
+
     def test_step(self, batch, batch_idx) -> Float[Tensor, ""]:
-        return self.validation_step(batch, batch_idx, name="test")
+        return self.step(batch, "test")
 
     def predict_step(self, batch, batch_idx) -> Tuple[
         Float[Tensor, "batch color height width"],

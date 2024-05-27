@@ -22,10 +22,10 @@ class VQC(nn.Module):
             config.concept_embedding_dim,
             scale_grad_by_freq=True,
         )
-        if config.is_product_concept:
-            nn.init.uniform_(self.concept_weights.weight, 0, 2 * t.pi)
-        else:
-            nn.init.uniform_(self.concept_weights.weight, 0, 1) # TODO: check
+        # if config.is_product_concept:
+        nn.init.uniform_(self.concept_weights.weight, 0, 2 * t.pi)
+        # else:
+            # nn.init.uniform_(self.concept_weights.weight, 0, 1) # TODO: check
 
         dev = qml.device("default.qubit", wires=config.num_instance_domains)
         self.circuit = qml.QNode(
