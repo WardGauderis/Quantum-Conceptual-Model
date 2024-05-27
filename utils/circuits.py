@@ -1,14 +1,94 @@
 # %%
 
-from ast import List
 from functools import partial
 from re import T
 
-from matplotlib import table
 import pennylane as qml
 import torch as t
 from jaxtyping import Float
+from matplotlib import table
+from pennylane.operation import AnyWires, Operation
 from torch import Tensor
+
+
+# qml.StronglyEntanglingLayers but edited to take into account the edge case of two wires
+class StronglyEntanglingLayers(Operation):
+    num_wires = AnyWires
+    grad_method = None
+
+    def __init__(self, weights, wires, ranges=None, imprimitive=None, id=None):
+        shape = qml.math.shape(weights)[-3:]
+
+        if shape[1] != len(wires):
+            raise ValueError(
+                f"Weights tensor must have second dimension of length {len(wires)}; got {shape[1]}"
+            )
+
+        if shape[2] != 3:
+            raise ValueError(
+                f"Weights tensor must have third dimension of length 3; got {shape[2]}"
+            )
+
+        if ranges is None:
+            if len(wires) > 1:
+                # tile ranges with iterations of range(1, n_wires)
+                ranges = tuple((l % (len(wires) - 1)) + 1 for l in range(shape[0]))
+            else:
+                ranges = (0,) * shape[0]
+        else:
+            ranges = tuple(ranges)
+            if len(ranges) != shape[0]:
+                raise ValueError(
+                    f"Range sequence must be of length {shape[0]}; got {len(ranges)}"
+                )
+            for r in ranges:
+                if r % len(wires) == 0:
+                    raise ValueError(
+                        f"Ranges must not be zero nor divisible by the number of wires; got {r}"
+                    )
+
+        self._hyperparameters = {
+            "ranges": ranges,
+            "imprimitive": imprimitive or qml.CNOT,
+        }
+
+        super().__init__(weights, wires=wires, id=id)
+
+    @property
+    def num_params(self):
+        return 1
+
+    @staticmethod
+    def compute_decomposition(weights, wires, ranges, imprimitive):
+        n_layers = qml.math.shape(weights)[0]
+        wires = qml.wires.Wires(wires)
+        op_list = []
+
+        for l in range(n_layers):
+            for i in range(len(wires)):
+                op_list.append(
+                    qml.Rot(
+                        weights[..., l, i, 0],
+                        weights[..., l, i, 1],
+                        weights[..., l, i, 2],
+                        wires=wires[i],
+                    )
+                )
+
+            # Fix to avoid repeating gates when there are only two wires
+            if len(wires) == 2:
+                act_on = wires.subset([0, 1])
+                op_list.append(imprimitive(wires=act_on))
+            elif len(wires) > 1:
+                for i in range(len(wires)):
+                    act_on = wires.subset([i, i + ranges[l]], periodic_boundary=True)
+                    op_list.append(imprimitive(wires=act_on))
+
+        return op_list
+
+    @staticmethod
+    def shape(n_layers, n_wires):
+        return n_layers, n_wires, 3
 
 
 def instance_circuit(
@@ -31,7 +111,7 @@ def product_concept_circuit(
 def entangled_concept_circuit(
     domains: list[int], concept: Float[Tensor, "repeat domain weights"]
 ):
-    qml.StronglyEntanglingLayers(concept, wires=domains, imprimitive=qml.CZ)
+    StronglyEntanglingLayers(concept, wires=domains, imprimitive=qml.CZ)
 
 
 def create_circuit(

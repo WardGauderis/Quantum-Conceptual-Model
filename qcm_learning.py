@@ -52,13 +52,13 @@ def plot_model_representations(
         concepts = rearrange(
             model.vqc.concept_weights.weight.detach(),
             "(domain property) weights -> domain property weights",
-            domain=data.config.num_domains,
+            domain=data.config.num_instance_domains,
         )
 
         instances = prediction[0][2]
         instance_concepts = next(iter(data.predict_dataloader()))[1]
 
-        for domain in range(data.config.num_domains):
+        for domain in range(data.config.num_instance_domains):
             plot_representations(
                 concepts[domain],
                 instances[:, domain],
@@ -75,7 +75,7 @@ shapes_trainer = trainer("shapes")
 
 # %%
 
-shapes_trainer.fit(shapes_model, shapes)
+# shapes_trainer.fit(shapes_model, shapes)
 
 # %%
 
@@ -85,12 +85,14 @@ try:
     )
 except IsADirectoryError:
     shapes_model = Hybrid.load_from_checkpoint(
-        "lightning_logs/shapes/checkpoints/shapes-loss-epoch=70.ckpt"
+        "lightning_logs/shapes/checkpoints/shapes-loss-epoch=47.ckpt"
     )
         
 shapes_trainer.validate(shapes_model, shapes)
 shapes_trainer.test(shapes_model, shapes)
-plot_model_representations(shapes, shapes_model, shapes_trainer)
+# plot_model_representations(shapes, shapes_model, shapes_trainer)
+
+shapes_model.vqc.plot()
 
 # %% RAINBOW MODEL
 
@@ -150,6 +152,8 @@ correlated_model = Hybrid(correlated.config)
 correlated_model.encoder = shapes_model.encoder
 correlated_model.encoder.requires_grad_(False)
 correlated_trainer = trainer("correlated")
+
+correlated_model.vqc.plot()
 
 # %%
 

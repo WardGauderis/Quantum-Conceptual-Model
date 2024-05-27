@@ -22,9 +22,12 @@ class VQC(nn.Module):
             config.concept_embedding_dim,
             scale_grad_by_freq=True,
         )
-        nn.init.uniform_(self.concept_weights.weight, 0, 2 * t.pi)
+        if config.is_product_concept:
+            nn.init.uniform_(self.concept_weights.weight, 0, 2 * t.pi)
+        else:
+            nn.init.uniform_(self.concept_weights.weight, 0, 1) # TODO: check
 
-        dev = qml.device("default.qubit", wires=config.num_domains)
+        dev = qml.device("default.qubit", wires=config.num_instance_domains)
         self.circuit = qml.QNode(
             create_circuit(
                 config.concept_type,
@@ -37,18 +40,39 @@ class VQC(nn.Module):
             cachesize=40000,
         )
         # self.circuit = qml.compile(self.circuit)
-        self.num_concept_domains = config.num_concept_domains
+
+        self.config = config
+
+    def plot(self):
+        instance = t.zeros(self.config.num_instance_domains, 3)
+
+        if self.config.is_entangled_concept:
+            concept = rearrange(
+                self.concept_weights.weight,
+                "none (repeat domain weights) -> (none repeat) domain weights",
+                domain=self.config.num_concept_domains,
+                weights=3,
+            )
+        else:
+            concept = rearrange(
+                self.concept_weights(t.zeros(self.config.num_instance_domains, dtype=t.long)),
+                "domain weights -> domain weights",
+            )
+
+        qml.draw_mpl(self.circuit, style="black_white", expansion_strategy="device")(
+            instance, concept
+        )
 
     def forward(
         self,
         instance: Float[Tensor, "batch domain weights"],
-        concept_index: Int[Tensor, ""],
+        concept_index: Int[Tensor, "batch domain"],
     ) -> Float[Tensor, "batch domain"]:
-        if concept_index is None:
+        if self.config.is_entangled_concept:
             concept = rearrange(
                 self.concept_weights.weight,
                 "none (repeat domain weights) -> (none repeat) domain weights",
-                domain=self.num_concept_domains,
+                domain=self.config.num_concept_domains,
                 weights=3,
             )
         else:

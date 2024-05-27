@@ -32,21 +32,29 @@ class Config:
         self.concept_embedding_dim = concept_embedding_dim
 
         self.offsets = t.tensor(
-            [i * self.num_properties for i in range(self.num_domains)],
+            [i * self.num_properties for i in range(self.num_instance_domains)],
             dtype=t.int,
         )
 
     @property
-    def num_domains(self) -> int:
+    def num_concept_domains(self) -> int:
+        return len(self.concept_domains)
+
+    @property
+    def num_instance_domains(self) -> int:
         return self.properties.shape[0]
 
     @property
     def num_properties(self) -> int:
         return self.properties.shape[1]
-    
+
     @property
     def num_concepts(self) -> int:
-        return self.num_domains * self.num_properties if self.is_product_concept else 1
+        return (
+            self.num_instance_domains * self.num_properties
+            if self.is_product_concept
+            else 1
+        )
 
     @property
     def is_product_concept(self) -> bool:
@@ -61,14 +69,10 @@ class Config:
         return [
             i for i, domain in enumerate(self.domains) if domain in self.concept_domains
         ]
-        
+
     @property
     def instance_domain_indices(self) -> list[int]:
-        return list(range(self.num_domains))
-        
-    @property
-    def num_concept_domains(self) -> int:
-        return len(self.concept_domains)
+        return list(range(self.num_instance_domains))
 
     def add_offset(
         self, concepts: Int[Tensor, "batch domain"]
