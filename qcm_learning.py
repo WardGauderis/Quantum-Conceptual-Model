@@ -3,6 +3,8 @@
 # TODO: remove if name == main
 
 import copy
+import dis
+
 import lightning as l
 import matplotlib.pyplot as plt
 import torch as t
@@ -13,7 +15,7 @@ from tqdm import tqdm
 from architecture import Hybrid
 from data_modules import ProductConceptDataModule
 from data_modules.entangled_concept import EntangledConceptDataModule
-from utils import plot_representations
+from utils import plot_model_representations
 
 t.set_float32_matmul_precision("high")
 
@@ -45,42 +47,18 @@ def trainer(name: str, max_epochs: int = 100) -> l.Trainer:
     )
 
 
-def plot_model_representations(
-    data: ProductConceptDataModule, model: l.LightningModule, trainer: l.Trainer
-):
-    prediction = trainer.predict(model, data)
-    if prediction is not None:
-        concepts = rearrange(
-            model.vqc.concept_weights.weight.detach(),
-            "(domain property) weights -> domain property weights",
-            domain=data.config.num_instance_domains,
-        )
-
-        instances = prediction[0][2]
-        instance_concepts = next(iter(data.predict_dataloader()))[1]
-
-        for domain in range(data.config.num_instance_domains):
-            plot_representations(
-                concepts[domain],
-                instances[:, domain],
-                instance_concepts[:, domain],
-                data.config.properties[domain],
-            )
-
-
 # %% SHAPES MODEL
 
-shapes = ProductConceptDataModule("blackbird/data/shapes", 2**6)
+shapes = ProductConceptDataModule("blackbird/data/shapes", 2**4)
 shapes_model = Hybrid(shapes.config)
-shapes_trainer = trainer("shapes")
+shapes_trainer = trainer("shapes", max_epochs=100)
 
 shapes_model.vqc.plot()
 
 # %%
+plot_model_representations(shapes, shapes_model, shapes_trainer)
 
 shapes_trainer.fit(shapes_model, shapes)
-
-# %%
 
 try:
     shapes_model = Hybrid.load_from_checkpoint(
@@ -93,8 +71,8 @@ except IsADirectoryError:
 
 shapes_trainer.validate(shapes_model, shapes)
 shapes_trainer.test(shapes_model, shapes)
-plot_model_representations(shapes, shapes_model, shapes_trainer)
 
+plot_model_representations(shapes, shapes_model, shapes_trainer)
 
 # %% RAINBOW MODEL
 
@@ -149,7 +127,8 @@ if prediction is not None:
 
 # %% CORRELATED CONCEPT
 
-correlated = EntangledConceptDataModule("blackbird/data/shapes", "correlated", 2**6, 2)
+correlated = EntangledConceptDataModule("blackbird/data/shapes", "correlated", 2**6)
+correlated.config.layers = 2
 correlated_model = Hybrid(correlated.config)
 correlated_model.encoder = copy.deepcopy(shapes_model.encoder)
 correlated_model.encoder.requires_grad_(False)
@@ -168,7 +147,9 @@ correlated_trainer.test(correlated_model, correlated)
 
 # %% GENERAL CONCEPT
 
-general = EntangledConceptDataModule("blackbird/data/shapes", "red", 2**6, 2)
+general = EntangledConceptDataModule("blackbird/data/shapes", "red", 2**6)
+general.config.concept_type = "general"
+general.config.layers = 2
 general_model = Hybrid(general.config)
 general_model.encoder = copy.deepcopy(shapes_model.encoder)
 general_model.encoder.requires_grad_(False)
@@ -187,7 +168,10 @@ general_trainer.test(general_model, general)
 
 # %% LOGIC OPERATOR CONCEPT
 
-conjunction = EntangledConceptDataModule("blackbird/data/shapes", "red_and_circle", 2**6, 3)
+conjunction = EntangledConceptDataModule(
+    "blackbird/data/shapes", "red_and_circle", 2**6
+)
+conjunction.config.layers = 3
 conjunction_model = Hybrid(conjunction.config)
 conjunction_model.encoder = copy.deepcopy(shapes_model.encoder)
 conjunction_model.encoder.requires_grad_(False)
@@ -206,7 +190,8 @@ conjunction_trainer.test(conjunction_model, conjunction)
 
 # %%
 
-disjunction = EntangledConceptDataModule("blackbird/data/shapes", "red_or_blue", 2**6, 3)
+disjunction = EntangledConceptDataModule("blackbird/data/shapes", "red_or_blue", 2**6)
+disjunction.config.layers = 3
 disjunction_model = Hybrid(disjunction.config)
 disjunction_model.encoder = copy.deepcopy(shapes_model.encoder)
 disjunction_model.encoder.requires_grad_(False)
@@ -218,7 +203,7 @@ disjunction_trainer.fit(disjunction_model, disjunction)
 
 disjunction_model = Hybrid.load_from_checkpoint(
     disjunction_trainer.checkpoint_callback.best_model_path  # type: ignore
-)  
+)
 
 disjunction_trainer.validate(disjunction_model, disjunction)
 disjunction_trainer.test(disjunction_model, disjunction)
@@ -226,8 +211,9 @@ disjunction_trainer.test(disjunction_model, disjunction)
 # %%
 
 disjunction_within = EntangledConceptDataModule(
-    "blackbird/data/shapes", "red_or_circle", 2**6, 3
+    "blackbird/data/shapes", "red_or_circle", 2**6
 )
+disjunction_within.config.layers = 3
 disjunction_within_model = Hybrid(disjunction_within.config)
 disjunction_within_model.encoder = copy.deepcopy(shapes_model.encoder)
 disjunction_within_model.encoder.requires_grad_(False)

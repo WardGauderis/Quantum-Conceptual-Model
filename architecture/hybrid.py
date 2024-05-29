@@ -40,14 +40,14 @@ class Hybrid(l.LightningModule):
         y_pred = self.vqc(encoding, index)
         if product:
             y_pred = reduce(y_pred, "batch domain -> batch", "prod")
-        x_pred = self.decoder(encoding)
-        return x_pred, y_pred, encoding
+        # x_pred = self.decoder(encoding)
+        return x, y_pred, encoding
 
     def loss(self, x, y, x_pred, y_pred) -> Float[Tensor, ""]:
         y_pred = y_pred.clamp(0, 1)
         return (
             nn.functional.binary_cross_entropy(y_pred, y)
-            + nn.functional.mse_loss(x_pred, x) * self.config.decoder_multiplier
+            # + nn.functional.mse_loss(x_pred, x) * self.config.decoder_multiplier
         )
 
     def evaluate_indices(self, x, index):
@@ -77,9 +77,12 @@ class Hybrid(l.LightningModule):
         self.log(f"{name}_loss", loss, prog_bar=True)
         
         
+        if name == "train":
+            return loss
+        
         if self.config.is_product_concept:
             index_accuracy = self.evaluate_indices(x, index)
-            for i in range(self.config.num_instance_domains):
+            for i in range(self.config.num_domains):
                 self.log(f"{name}_accuracy_{i}", index_accuracy[i])
             self.log(f"{name}_accuracy", t.mean(index_accuracy), prog_bar=True)
         else:

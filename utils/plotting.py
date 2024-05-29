@@ -1,13 +1,15 @@
 from functools import partial
 
+import lightning as l
+import numpy as np
 import pennylane as qml
 import qutip as qt
 import torch as t
 from einops import rearrange
 from jaxtyping import Float
 from torch import Tensor
-import numpy as np
 
+from data_modules import ProductConceptDataModule
 from utils.circuits import instance_circuit
 
 dev = qml.device("default.qubit", wires=1)
@@ -91,3 +93,35 @@ def plot_representations(
     b.make_sphere()
     b.render()
     b.show()
+
+
+
+def plot_model_representations(
+    data: ProductConceptDataModule, model: l.LightningModule, trainer: l.Trainer
+):
+    predict_dataloader = data.predict_dataloader
+    batch_size = data.batch_size
+    data.predict_dataloader = partial(data.train_dataloader, shuffle=False)
+    data.batch_size = len(data.train)
+    
+    prediction = trainer.predict(model, data)
+    if prediction is not None:
+        concepts = rearrange(
+            model.vqc.concept_weights.weight.detach(),
+            "(domain property) weights -> domain property weights",
+            domain=data.config.num_domains,
+        )
+
+        instances = prediction[0][2]
+        instance_concepts = next(iter(data.predict_dataloader()))[1]
+
+        for domain in range(data.config.num_domains):
+            plot_representations(
+                concepts[domain],
+                instances[:, domain],
+                instance_concepts[:, domain],
+                data.config.properties[domain],
+            )
+    
+    data.predict_dataloader = predict_dataloader
+    data.batch_size = batch_size

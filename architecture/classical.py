@@ -38,7 +38,7 @@ class Encoder(nn.Module):
         self.dense = nn.Sequential(
             nn.Linear(256, 256),
             nn.ReLU(True),
-            nn.Linear(256, config.num_instance_domains * 3),
+            nn.Linear(256, config.num_domains * 3),
             # nn.ReLU(True),
         )
 
@@ -66,7 +66,7 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.dense = nn.Sequential(
-            nn.Linear(config.num_instance_domains * 3, 256),
+            nn.Linear(config.num_domains * 3, 256),
             nn.ReLU(True),
             nn.Linear(256, 256),
             nn.ReLU(True),
@@ -96,13 +96,3 @@ class Decoder(nn.Module):
         x = x.view(x.size(0), 64, 2, 2)
         x = self.conv(x)
         return x
-
-
-# %%
-
-if __name__ == "__main__":
-    model = Encoder(12)
-    model.to("cuda:0")
-    print(summary(model, (1, 3, 64, 64)))
-
-# %%

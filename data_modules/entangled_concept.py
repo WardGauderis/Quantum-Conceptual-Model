@@ -19,7 +19,7 @@ from utils import Config
 
 
 class EntangledConceptDataset(Dataset):
-    def __init__(self, name: str, concept_name: str, layers: int):
+    def __init__(self, name: str, concept_name: str):
         match concept_name:
             case "distribute_three":
                 filename = "distribute_three.csv"
@@ -35,8 +35,7 @@ class EntangledConceptDataset(Dataset):
         self.config = Config(
             np.array(concepts.columns),
             np.array([concepts[column].cat.categories for column in concepts.columns]),
-            "entangled_concept",
-            12,
+            "domain_only"
         )
 
         match concept_name:
@@ -66,7 +65,6 @@ class EntangledConceptDataset(Dataset):
 
         self.concepts = t.tensor(concepts, dtype=t.double)
         self.config.concept_domains = np.array(domains)
-        self.config.concept_embedding_dim = self.config.num_concept_domains * 3 * layers
 
         print(
             f"Balance of {name}-{concept_name} dataset: {self.concepts.float().mean().item()} true"
@@ -117,12 +115,12 @@ class EntangledConceptDataset(Dataset):
 if __name__ == "__main__":
     # correlated
 
-    dataset = EntangledConceptDataset("data/shapes/val", "correlated", 3)
+    dataset = EntangledConceptDataset("data/shapes/val", "correlated")
     print(len(dataset))
 
     # rows
 
-    dataset = EntangledConceptDataset("data/blackbird/val", "distribute_three", 3)
+    dataset = EntangledConceptDataset("data/blackbird/val", "distribute_three")
     print(len(dataset))
 
     x, y = dataset[3]
@@ -138,7 +136,7 @@ if __name__ == "__main__":
 
     # blackbird
 
-    dataset = EntangledConceptDataset("data/blackbird/val", "blackbird", 3)
+    dataset = EntangledConceptDataset("data/blackbird/val", "blackbird")
     print(len(dataset))
 
     x, y = dataset[0]
@@ -152,7 +150,7 @@ if __name__ == "__main__":
 
 
 class EntangledConceptDataModule(l.LightningDataModule):
-    def __init__(self, data_dir: str, type: str, batch_size: int, layers: int):
+    def __init__(self, data_dir: str, type: str, batch_size: int):
         super().__init__()
         self.data_dir = data_dir
         self.type = type
@@ -161,9 +159,9 @@ class EntangledConceptDataModule(l.LightningDataModule):
         self.num_workers = 4
         self.pin_memory = True
 
-        self.train = EntangledConceptDataset(self.data_dir + "/train", self.type, layers)
-        self.val = EntangledConceptDataset(self.data_dir + "/val", self.type, layers)
-        self.test = EntangledConceptDataset(self.data_dir + "/test", self.type, layers)
+        self.train = EntangledConceptDataset(self.data_dir + "/train", self.type)
+        self.val = EntangledConceptDataset(self.data_dir + "/val", self.type)
+        self.test = EntangledConceptDataset(self.data_dir + "/test", self.type)
 
         self.config = self.train.config
 

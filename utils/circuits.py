@@ -109,18 +109,20 @@ def product_concept_circuit(
 
 
 def entangled_concept_circuit(
-    domains: list[int], concept: Float[Tensor, "repeat domain weights"]
+    domains: list[int], concept: Float[Tensor, "layer domain weights"]
 ):
     StronglyEntanglingLayers(concept, wires=domains, imprimitive=qml.CZ)
 
 
 def create_circuit(
     type: str,
-    instance_domains: list[int],
+    num_domains: int,
     concept_domains: list[int],
 ):
+    instance_domains = list(range(num_domains))
+
     match type:
-        case "product_concept":
+        case "product":
 
             def circuit(
                 instance: Float[Tensor, "domain weights batch"],
@@ -131,16 +133,33 @@ def create_circuit(
 
                 return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
 
-        case "entangled_concept":
+        case "domain_only":
 
             def circuit(
                 instance: Float[Tensor, "domain weights batch"],
-                concept: Float[Tensor, "repeat domain batch"],
+                concept: Float[Tensor, "layer domain batch"],
             ):
                 instance_circuit(instance_domains, instance)
                 entangled_concept_circuit(concept_domains, concept)
 
                 return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
+
+        case "general":
+
+            def circuit(
+                instance: Float[Tensor, "domain weights batch"],
+                concept: Float[Tensor, "layer domain weights batch"],
+            ):
+                instance_circuit(instance_domains, instance)
+                entangled_concept_circuit(
+                    list(range(num_domains * 2)),
+                    concept,
+                )
+
+                # TODO: clean up
+                return [
+                    qml.expval(qml.PauliZ(w + num_domains)) for w in range(num_domains)
+                ]
 
     return circuit
 
@@ -152,7 +171,7 @@ def create_circuit(
 
 # dev = qml.device("default.qubit", wires=4)
 
-# c = create_circuit("entangled_concept", 4)
+# c = create_circuit("domain_only", 4)
 
 # # c = qml.compile()(circuit)
 # c = qml.QNode(c, dev, interface="torch", diff_method="backprop", cachesize=40000)

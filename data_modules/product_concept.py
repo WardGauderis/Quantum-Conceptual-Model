@@ -22,7 +22,7 @@ from utils import Config
 
 
 class ProductConceptDataset(Dataset):
-    def __init__(self, name: str):
+    def __init__(self, name: str):        
         self.concepts = read_csv(join(name, "product_concepts.csv"), dtype="category")
 
         self.config = Config(
@@ -33,8 +33,7 @@ class ProductConceptDataset(Dataset):
                     for column in self.concepts.columns
                 ]
             ),
-            "product_concept",
-            3,
+            "product",
         )
 
         for column in self.concepts.columns:
@@ -74,11 +73,11 @@ class ProductConceptDataModule(l.LightningDataModule):
 
         self.config = self.train.config
 
-    def train_dataloader(self):
+    def train_dataloader(self, shuffle: bool = True):
         return DataLoader(
             self.train,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=shuffle,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
         )
@@ -122,8 +121,9 @@ class ProductConceptDataModule(l.LightningDataModule):
 
         if self.trainer.predicting:  # type: ignore
             return instance, concept, t.ones(instance.shape[0], dtype=t.double)
-
-        num_negatives = 1
+        
+        # TODO: test 2 better spread
+        num_negatives = 1 if self.trainer.training else 1 # type: ignore
 
         true_concept = repeat(
             concept, "batch domain -> (copies batch) domain", copies=num_negatives
