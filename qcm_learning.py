@@ -3,7 +3,6 @@
 # TODO: remove if name == main
 
 import copy
-import dis
 
 import lightning as l
 import matplotlib.pyplot as plt
@@ -66,7 +65,7 @@ try:
     )
 except IsADirectoryError:
     shapes_model = Hybrid.load_from_checkpoint(
-        "lightning_logs/shapes/checkpoints/shapes-loss-epoch=80.ckpt"
+        "lightning_logs/shapes/checkpoints/shapes-loss-epoch=77.ckpt"
     )
 
 shapes_trainer.validate(shapes_model, shapes)
@@ -171,6 +170,7 @@ general_trainer.test(general_model, general)
 conjunction = EntangledConceptDataModule(
     "blackbird/data/shapes", "red_and_circle", 2**6
 )
+conjunction.config.concept_type = "general"
 conjunction.config.layers = 3
 conjunction_model = Hybrid(conjunction.config)
 conjunction_model.encoder = copy.deepcopy(shapes_model.encoder)
@@ -191,7 +191,8 @@ conjunction_trainer.test(conjunction_model, conjunction)
 # %%
 
 disjunction = EntangledConceptDataModule("blackbird/data/shapes", "red_or_blue", 2**6)
-disjunction.config.layers = 3
+disjunction.config.concept_type = "general"
+disjunction.config.layers = 2
 disjunction_model = Hybrid(disjunction.config)
 disjunction_model.encoder = copy.deepcopy(shapes_model.encoder)
 disjunction_model.encoder.requires_grad_(False)
@@ -213,6 +214,7 @@ disjunction_trainer.test(disjunction_model, disjunction)
 disjunction_within = EntangledConceptDataModule(
     "blackbird/data/shapes", "red_or_circle", 2**6
 )
+disjunction_within.config.concept_type = "general"
 disjunction_within.config.layers = 3
 disjunction_within_model = Hybrid(disjunction_within.config)
 disjunction_within_model.encoder = copy.deepcopy(shapes_model.encoder)

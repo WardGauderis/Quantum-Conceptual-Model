@@ -22,6 +22,8 @@ def to_state(instance: Float[Tensor, "weights batch"]):
 
 to_state = qml.QNode(to_state, dev, interface="torch")
 
+# TODO: color order
+
 color_map = np.array(
     [
         "red",

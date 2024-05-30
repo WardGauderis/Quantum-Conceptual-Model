@@ -77,8 +77,8 @@ class Hybrid(l.LightningModule):
         self.log(f"{name}_loss", loss, prog_bar=True)
         
         
-        if name == "train":
-            return loss
+        # if name == "train":
+        #     return loss
         
         if self.config.is_product_concept:
             index_accuracy = self.evaluate_indices(x, index)
