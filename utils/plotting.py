@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Optional
 
 import lightning as l
 import numpy as np
@@ -99,12 +100,14 @@ def plot_representations(
 
 
 def plot_model_representations(
-    data: ProductConceptDataModule, model: l.LightningModule, trainer: l.Trainer
+    data: ProductConceptDataModule, model: l.LightningModule, trainer: l.Trainer, 
+    batch_size: Optional[int] = None
 ):
-    predict_dataloader = data.predict_dataloader
-    batch_size = data.batch_size
+    backup_predict_dataloader = data.predict_dataloader
+    backup_batch_size = data.batch_size
+    
     data.predict_dataloader = partial(data.train_dataloader, shuffle=False)
-    data.batch_size = len(data.train)
+    data.batch_size = batch_size if batch_size is not None else len(data.train)
     
     prediction = trainer.predict(model, data)
     if prediction is not None:
@@ -125,5 +128,5 @@ def plot_model_representations(
                 data.config.properties[domain],
             )
     
-    data.predict_dataloader = predict_dataloader
-    data.batch_size = batch_size
+    data.predict_dataloader = backup_predict_dataloader
+    data.batch_size = backup_batch_size

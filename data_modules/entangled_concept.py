@@ -21,22 +21,35 @@ from utils import Config
 class EntangledConceptDataset(Dataset):
     def __init__(self, name: str, concept_name: str):
         match concept_name:
-            case "distribute_three":
-                filename = "distribute_three.csv"
-            case "progression":
-                filename = "progression.csv"
+            case "distribute_three" | "progression":
+                concepts = read_csv(join(name, concept_name + ".csv"), dtype="bool")
+                self.config = Config(
+                    np.array(
+                        [
+                            "color_1",
+                            "position_1",
+                            "color_2",
+                            "position_2",
+                            "color_3",
+                            "position_3",
+                        ]
+                    ),
+                    np.array([["0"], ["0"], ["0"], ["0"], ["0"], ["0"]]),
+                    "domain_only",
+                )
             case "blackbird":
-                filename = "blackbird.csv"
+                concepts = read_csv(join(name, "blackbird.csv"), dtype="category")
             case _:
-                filename = "product_concepts.csv"
-
-        concepts = read_csv(join(name, filename), dtype="category")
-
-        self.config = Config(
-            np.array(concepts.columns),
-            np.array([concepts[column].cat.categories for column in concepts.columns]),
-            "domain_only"
-        )
+                concepts = read_csv(
+                    join(name, "product_concepts.csv"), dtype="category"
+                )
+                self.config = Config(
+                    np.array(concepts.columns),
+                    np.array(
+                        [concepts[column].cat.categories for column in concepts.columns]
+                    ),
+                    "domain_only",
+                )
 
         match concept_name:
             case "correlated":
@@ -60,6 +73,12 @@ class EntangledConceptDataset(Dataset):
                     concepts["shape"] == "circle"
                 )
                 domains = ["color", "shape"]
+            case "progression":
+                concepts = concepts["correct"]
+                domains = ["position_1", "position_2", "position_3"]
+            case "distribute_three":
+                concepts = concepts["correct"]
+                domains = ["color_1", "color_2", "color_3"]
             case "blackbird":
                 concepts = concepts["correct"]
 

@@ -7,9 +7,6 @@ import copy
 import lightning as l
 import matplotlib.pyplot as plt
 import torch as t
-from einops import rearrange
-from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
-from tqdm import tqdm
 
 from architecture import Hybrid
 from data_modules import ProductConceptDataModule
@@ -19,38 +16,11 @@ from utils import plot_model_representations
 t.set_float32_matmul_precision("high")
 
 
-class NoValidationBar(TQDMProgressBar):
-    def init_validation_tqdm(self):
-        bar = tqdm(disable=True)
-        return bar
-
-
-def trainer(name: str, max_epochs: int = 100) -> l.Trainer:
-    return l.Trainer(
-        max_epochs=max_epochs,
-        callbacks=[
-            ModelCheckpoint(
-                monitor="val_loss",
-                mode="min",
-                save_top_k=1,
-                filename=name + "-loss-{epoch:02d}",
-            ),
-            # ModelCheckpoint(
-            #     monitor="val_accuracy",
-            #     mode="max",
-            #     save_top_k=1,
-            #     filename=name + "-accuracy-{epoch:02d}",
-            # ),
-            NoValidationBar(),
-        ],
-    )
-
-
 # %% SHAPES MODEL
 
 shapes = ProductConceptDataModule("blackbird/data/shapes", 2**4)
 shapes_model = Hybrid(shapes.config)
-shapes_trainer = trainer("shapes", max_epochs=100)
+shapes_trainer = shapes.config.trainer("shapes")
 
 shapes_model.vqc.plot()
 
@@ -77,7 +47,7 @@ plot_model_representations(shapes, shapes_model, shapes_trainer)
 
 rainbow = ProductConceptDataModule("blackbird/data/rainbow", 2**6)
 rainbow_model = Hybrid(rainbow.config)
-rainbow_trainer = trainer("rainbow")
+rainbow_trainer = rainbow.config.trainer("rainbow")
 
 # %%
 
@@ -98,7 +68,7 @@ plot_model_representations(rainbow, rainbow_model, rainbow_trainer)
 decoder = shapes
 decoder.config.decoder_multiplier = 1500
 decoder_model = Hybrid(decoder.config)
-decoder_trainer = trainer("decoder")
+decoder_trainer = decoder.config.trainer("decoder")
 
 # %%
 
@@ -131,7 +101,7 @@ correlated.config.layers = 2
 correlated_model = Hybrid(correlated.config)
 correlated_model.encoder = copy.deepcopy(shapes_model.encoder)
 correlated_model.encoder.requires_grad_(False)
-correlated_trainer = trainer("correlated")
+correlated_trainer = correlated.config.trainer("correlated")
 
 correlated_model.vqc.plot()
 
@@ -152,7 +122,7 @@ general.config.layers = 2
 general_model = Hybrid(general.config)
 general_model.encoder = copy.deepcopy(shapes_model.encoder)
 general_model.encoder.requires_grad_(False)
-general_trainer = trainer("general")
+general_trainer = general.config.trainer("general")
 
 general_model.vqc.plot()
 
@@ -175,7 +145,7 @@ conjunction.config.layers = 3
 conjunction_model = Hybrid(conjunction.config)
 conjunction_model.encoder = copy.deepcopy(shapes_model.encoder)
 conjunction_model.encoder.requires_grad_(False)
-conjunction_trainer = trainer("conjunction")
+conjunction_trainer = conjunction.config.trainer("conjunction")
 
 conjunction_model.vqc.plot()
 
@@ -196,7 +166,7 @@ disjunction.config.layers = 2
 disjunction_model = Hybrid(disjunction.config)
 disjunction_model.encoder = copy.deepcopy(shapes_model.encoder)
 disjunction_model.encoder.requires_grad_(False)
-disjunction_trainer = trainer("disjunction")
+disjunction_trainer = disjunction.config.trainer("disjunction")
 
 disjunction_model.vqc.plot()
 
@@ -219,7 +189,7 @@ disjunction_within.config.layers = 3
 disjunction_within_model = Hybrid(disjunction_within.config)
 disjunction_within_model.encoder = copy.deepcopy(shapes_model.encoder)
 disjunction_within_model.encoder.requires_grad_(False)
-disjunction_within_trainer = trainer("disjunction_within")
+disjunction_within_trainer = disjunction_within.config.trainer("disjunction_within")
 
 disjunction_within_model.vqc.plot()
 
