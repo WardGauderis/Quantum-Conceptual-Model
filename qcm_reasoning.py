@@ -26,15 +26,17 @@ try:
     )
 except Exception:
     blackbird_model = Hybrid.load_from_checkpoint(
-        "lightning_logs/blackbird/checkpoints/blackbird-loss-epoch=85.ckpt"
+        "lightning_logs/blackbird/checkpoints/blackbird-loss-epoch=95.ckpt"
     )
 
-# blackbird_trainer.validate(blackbird_model, blackbird)
-# blackbird_trainer.test(blackbird_model, blackbird)
+blackbird_trainer.validate(blackbird_model, blackbird)
+blackbird_trainer.test(blackbird_model, blackbird)
 
-# plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=3000)
+plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=3000)
 
 # %% DISTRIBUTE_TREE CONCEPT
+
+# TODO: correct reshape (dataset + encoder)? Correct domains?
 
 distribute_three = EntangledConceptDataModule("blackbird/data/balanced", "distribute_three", 2**6)
 distribute_three.config.layers = 8

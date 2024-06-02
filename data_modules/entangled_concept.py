@@ -37,6 +37,7 @@ class EntangledConceptDataset(Dataset):
                     np.array([["0"], ["0"], ["0"], ["0"], ["0"], ["0"]]),
                     "domain_only",
                 )
+                self.config.multiple_images = True
             case "blackbird":
                 concepts = read_csv(join(name, "blackbird.csv"), dtype="category")
             case _:
@@ -90,9 +91,17 @@ class EntangledConceptDataset(Dataset):
         )
 
         transform = transforms.Compose([transforms.ToTensor()])
+        
+        match concept_name:
+            case "distribute_three" | "progression":
+                images_per_instance = 3
+            case "blackbird":
+                images_per_instance = 9
+            case _:
+                images_per_instance = 1
 
         self.instances = imread_collection(
-            [join(name, f"{i}.png") for i in range(len(self.concepts))],
+            [join(name, f"{i}.png") for i in range(len(self.concepts) * images_per_instance)],
             conserve_memory=False,
         )
         self.instances = pack(

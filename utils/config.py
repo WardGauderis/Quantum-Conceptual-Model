@@ -20,6 +20,8 @@ class Config:
 
     decoder_multiplier: float = 0
     layers: int = 1
+    
+    multiple_images: bool = False
 
     def __init__(
         self,

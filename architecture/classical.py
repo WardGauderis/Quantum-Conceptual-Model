@@ -23,7 +23,6 @@ from einops import rearrange
 class Encoder(nn.Module):
     def __init__(self, config: Config):
         super().__init__()
-
         self.conv = nn.Sequential(
             nn.Conv2d(3, 64, 4, 2),
             nn.ReLU(True),
@@ -49,12 +48,24 @@ class Encoder(nn.Module):
                 nn.init.zeros_(weight)
 
     def forward(
-        self, x: Float[Tensor, "batch color height width"]
+        self,
+        x: Float[Tensor, "batch color height width"],
+        multiple_images: bool = False,
     ) -> Float[Tensor, "batch domain weights"]:
+        if multiple_images:
+            x = rearrange(
+                x, "batch image color height width -> (batch image) color height width"
+            )
+            
         x = self.conv(x)
         x = x.view(x.size(0), -1)
         x = self.dense(x)
         x = rearrange(x, "batch (domain weights) -> batch domain weights", weights=3)
+        
+        if multiple_images:
+            x = rearrange(
+                x, "(batch image) domain weights -> batch (image domain) weights", image=3
+            )
         return x
 
 

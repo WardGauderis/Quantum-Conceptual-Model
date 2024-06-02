@@ -3,15 +3,14 @@ from typing import Tuple
 
 import lightning as l
 import torch as t
+from einops import rearrange, reduce
 from jaxtyping import Float, Int
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 from torchmetrics.classification import BinaryAccuracy
-from einops import reduce
-
-from utils import Config
 
 from architecture import VQC, Decoder, Encoder
+from utils import Config
 
 
 class Hybrid(l.LightningModule):
@@ -36,7 +35,7 @@ class Hybrid(l.LightningModule):
         Float[Tensor, "batch domain"],
         Float[Tensor, "batch domain weights"],
     ]:
-        encoding = self.encoder(x)
+        encoding = self.encoder(x, self.config.multiple_images)
         y_pred = self.vqc(encoding, index)
         if product:
             y_pred = reduce(y_pred, "batch domain -> batch", "prod")
