@@ -21,7 +21,7 @@ class Config:
     decoder_multiplier: float = 0
     layers: int = 1
     
-    multiple_images: bool = False
+    images_per_instance: int = 1
 
     def __init__(
         self,

@@ -2,6 +2,7 @@
 
 import copy
 from architecture import Hybrid
+from blackbird.generate_data import progression
 from data_modules import ProductConceptDataModule, EntangledConceptDataModule
 from utils import plot_model_representations
 
@@ -29,10 +30,10 @@ except Exception:
         "lightning_logs/blackbird/checkpoints/blackbird-loss-epoch=95.ckpt"
     )
 
-blackbird_trainer.validate(blackbird_model, blackbird)
-blackbird_trainer.test(blackbird_model, blackbird)
+# blackbird_trainer.validate(blackbird_model, blackbird)
+# blackbird_trainer.test(blackbird_model, blackbird)
 
-plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=3000)
+# plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=3000)
 
 # %% DISTRIBUTE_TREE CONCEPT
 
@@ -49,11 +50,31 @@ distribute_three_model.vqc.plot()
 
 distribute_three_trainer.fit(distribute_three_model, distribute_three)
 
-distribution_three_model = Hybrid.load_from_checkpoint(
-    distribute_three_trainer.checkpoint_callback.best_model_path  # type: ignore
+# distribution_three_model = Hybrid.load_from_checkpoint(
+#     distribute_three_trainer.checkpoint_callback.best_model_path  # type: ignore
+# )
+
+distribute_three_trainer.validate(distribute_three_model, distribute_three, ckpt_path="best")
+distribute_three_trainer.test(distribute_three_model, distribute_three, ckpt_path="best")
+
+# %% PROGRESSION CONCEPT
+
+progression = EntangledConceptDataModule("blackbird/data/balanced", "progression", 2**6)
+progression.config.layers = 4
+progression_model = Hybrid(progression.config)
+# progression_model.encoder = copy.deepcopy(blackbird_model.encoder)
+# progression_model.encoder.requires_grad_(False)
+progression_trainer = progression.config.trainer("progression")
+
+progression_model.vqc.plot()
+
+progression_trainer.fit(progression_model, progression)
+
+progression_model = Hybrid.load_from_checkpoint(
+    progression_trainer.checkpoint_callback.best_model_path  # type: ignore
 )
 
-distribute_three_trainer.validate(distribution_three_model, distribute_three)
-distribute_three_trainer.test(distribution_three_model, distribute_three)
+progression_trainer.validate(progression_model, progression)
+progression_trainer.test(progression_model, progression)
 
 # %%

@@ -35,7 +35,7 @@ class Hybrid(l.LightningModule):
         Float[Tensor, "batch domain"],
         Float[Tensor, "batch domain weights"],
     ]:
-        encoding = self.encoder(x, self.config.multiple_images)
+        encoding = self.encoder(x, self.config.images_per_instance)
         y_pred = self.vqc(encoding, index)
         if product:
             y_pred = reduce(y_pred, "batch domain -> batch", "prod")

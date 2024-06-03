@@ -37,7 +37,7 @@ class EntangledConceptDataset(Dataset):
                     np.array([["0"], ["0"], ["0"], ["0"], ["0"], ["0"]]),
                     "domain_only",
                 )
-                self.config.multiple_images = True
+                self.config.images_per_instance = 3
             case "blackbird":
                 concepts = read_csv(join(name, "blackbird.csv"), dtype="category")
             case _:

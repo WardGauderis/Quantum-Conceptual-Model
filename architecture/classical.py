@@ -37,7 +37,7 @@ class Encoder(nn.Module):
         self.dense = nn.Sequential(
             nn.Linear(256, 256),
             nn.ReLU(True),
-            nn.Linear(256, config.num_domains * 3),
+            nn.Linear(256, config.num_domains // config.images_per_instance * 3),
             # nn.ReLU(True),
         )
 
@@ -50,9 +50,9 @@ class Encoder(nn.Module):
     def forward(
         self,
         x: Float[Tensor, "batch color height width"],
-        multiple_images: bool = False,
+        images_per_instance: int = 1,
     ) -> Float[Tensor, "batch domain weights"]:
-        if multiple_images:
+        if images_per_instance > 1:
             x = rearrange(
                 x, "batch image color height width -> (batch image) color height width"
             )
@@ -62,7 +62,7 @@ class Encoder(nn.Module):
         x = self.dense(x)
         x = rearrange(x, "batch (domain weights) -> batch domain weights", weights=3)
         
-        if multiple_images:
+        if images_per_instance > 1:
             x = rearrange(
                 x, "(batch image) domain weights -> batch (image domain) weights", image=3
             )
