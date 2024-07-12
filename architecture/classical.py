@@ -64,7 +64,7 @@ class Encoder(nn.Module):
         
         if images_per_instance > 1:
             x = rearrange(
-                x, "(batch image) domain weights -> batch (image domain) weights", image=3
+                x, "(batch image) domain weights -> batch (image domain) weights", image=images_per_instance
             )
         return x
 

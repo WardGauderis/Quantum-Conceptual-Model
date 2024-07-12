@@ -111,22 +111,22 @@ class EntangledConceptDataset(Dataset):
         if concept_name == "progression":  # Make puzzles column-major
             self.instances = rearrange(
                 self.instances,
-                "(batch row column) color height width -> (batch column) row color height width",
+                "(puzzle row column) color height width -> (puzzle column) row color height width",
                 row=3,
                 column=3,
             )
         elif concept_name == "distribute_three":
             self.instances = rearrange(
                 self.instances,
-                "(batch row column) color height width -> (batch row) column color height width",
+                "(puzzle row column) color height width -> (puzzle row) column color height width",
                 row=3,
                 column=3,
             )
         elif concept_name == "blackbird":
             self.instances = rearrange(
                 self.instances,
-                "(batch puzzles) color height width -> batch puzzles color height width",
-                puzzles=9,
+                "(puzzle image) color height width -> puzzle image color height width",
+                image=9,
             )
 
     def __len__(self) -> int:
@@ -143,16 +143,16 @@ class EntangledConceptDataset(Dataset):
 if __name__ == "__main__":
     # correlated
 
-    dataset = EntangledConceptDataset("data/shapes/val", "correlated")
+    dataset = EntangledConceptDataset("blackbird/data/shapes/val", "correlated")
     print(len(dataset))
 
     # rows
 
-    dataset = EntangledConceptDataset("data/blackbird/val", "distribute_three")
+    dataset = EntangledConceptDataset("blackbird/data/balanced/train", "progression")
     print(len(dataset))
 
-    x, y = dataset[3]
-    print(x.shape, y.shape)
+    x, y = dataset[15]
+    print(y)
 
     import matplotlib.pyplot as plt
 
@@ -164,17 +164,17 @@ if __name__ == "__main__":
 
     # blackbird
 
-    dataset = EntangledConceptDataset("data/blackbird/val", "blackbird")
-    print(len(dataset))
+    # dataset = EntangledConceptDataset("blackbird/data/balanced/val", "blackbird")
+    # print(len(dataset))
 
-    x, y = dataset[0]
-    print(y)
+    # x, y = dataset[0]
+    # print(y)
 
-    fig, ax = plt.subplots(3, 3)
-    for i in range(3):
-        for j in range(3):
-            ax[i, j].imshow(x[3 * i + j].permute(1, 2, 0))
-    plt.show()
+    # fig, ax = plt.subplots(3, 3)
+    # for i in range(3):
+    #     for j in range(3):
+    #         ax[i, j].imshow(x[3 * i + j].permute(1, 2, 0))
+    # plt.show()
 
 
 class EntangledConceptDataModule(l.LightningDataModule):
@@ -239,3 +239,5 @@ class EntangledConceptDataModule(l.LightningDataModule):
     ]:
         instance, concept = batch
         return instance, None, concept
+
+# %%
