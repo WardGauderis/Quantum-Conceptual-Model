@@ -35,7 +35,7 @@ class EntangledConceptDataset(Dataset):
                         ]
                     ),
                     np.array([["0"], ["0"], ["0"], ["0"], ["0"], ["0"]]),
-                    "domain_only",
+                    "general",
                 )
                 self.config.images_per_instance = 3
             case "blackbird":
@@ -143,15 +143,15 @@ class EntangledConceptDataset(Dataset):
 if __name__ == "__main__":
     # correlated
 
-    dataset = EntangledConceptDataset("blackbird/data/shapes/val", "correlated")
-    print(len(dataset))
+    # dataset = EntangledConceptDataset("blackbird/data/shapes/val", "correlated")
+    # print(len(dataset))
 
     # rows
 
-    dataset = EntangledConceptDataset("blackbird/data/balanced/train", "progression")
+    dataset = EntangledConceptDataset("blackbird/data/balanced/val", "progression")
     print(len(dataset))
 
-    x, y = dataset[15]
+    x, y = dataset[0]
     print(y)
 
     import matplotlib.pyplot as plt
@@ -176,6 +176,7 @@ if __name__ == "__main__":
     #         ax[i, j].imshow(x[3 * i + j].permute(1, 2, 0))
     # plt.show()
 
+#%%
 
 class EntangledConceptDataModule(l.LightningDataModule):
     def __init__(self, data_dir: str, type: str, batch_size: int):

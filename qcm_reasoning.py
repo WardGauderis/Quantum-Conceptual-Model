@@ -30,14 +30,14 @@ except Exception:
         "lightning_logs/blackbird/checkpoints/blackbird-loss-epoch=95.ckpt"
     )
 
-# blackbird_trainer.validate(blackbird_model, blackbird)
-# blackbird_trainer.test(blackbird_model, blackbird)
+blackbird_trainer.validate(blackbird_model, blackbird)
+blackbird_trainer.test(blackbird_model, blackbird)
 
-# plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=3000)
+plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=3000)
 
 # %% DISTRIBUTE_TREE CONCEPT
 
-# TODO: correct reshape (dataset + encoder)? Correct domains?
+# TODO: correct reshape (encoder)? Correct domains? Correct probability circuits?
 
 distribute_three = EntangledConceptDataModule("blackbird/data/balanced", "distribute_three", 2**6)
 distribute_three.config.layers = 8
@@ -62,9 +62,9 @@ distribute_three_trainer.test(distribute_three_model, distribute_three, ckpt_pat
 progression = EntangledConceptDataModule("blackbird/data/balanced", "progression", 2**6)
 progression.config.layers = 4
 progression_model = Hybrid(progression.config)
-# progression_model.encoder = copy.deepcopy(blackbird_model.encoder)
-# progression_model.encoder.requires_grad_(False)
-progression_trainer = progression.config.trainer("progression")
+progression_model.encoder = copy.deepcopy(blackbird_model.encoder)
+progression_model.encoder.requires_grad_(False)
+progression_trainer = progression.config.trainer("progression", max_epochs=20)
 
 progression_model.vqc.plot()
 
