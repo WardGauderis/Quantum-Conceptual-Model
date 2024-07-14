@@ -81,7 +81,7 @@ class Hybrid(l.LightningModule):
         
         if self.config.is_product_concept:
             index_accuracy = self.evaluate_indices(x, index)
-            for i in range(self.config.num_domains):
+            for i in range(self.config.num_instance_domains):
                 self.log(f"{name}_accuracy_{i}", index_accuracy[i])
             self.log(f"{name}_accuracy", t.mean(index_accuracy), prog_bar=True)
         else:

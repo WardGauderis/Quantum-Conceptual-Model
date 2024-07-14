@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 @dataclass
 class Config:
-    domains: np.ndarray
+    instance_domains: np.ndarray
     properties: np.ndarray
 
     concept_type: str
@@ -20,23 +20,23 @@ class Config:
 
     decoder_multiplier: float = 0
     layers: int = 1
-    
+
     images_per_instance: int = 1
 
     def __init__(
         self,
-        domains: np.ndarray,
+        instance_domains: np.ndarray,
         properties: np.ndarray,
         concept_type: str,
     ):
-        self.domains = domains
+        self.instance_domains = instance_domains
         self.properties = properties
 
         self.concept_type = concept_type
-        self.concept_domains = domains
+        self.concept_domains = instance_domains
 
         self.offsets = t.tensor(
-            [i * self.num_properties for i in range(self.num_domains)],
+            [i * self.num_properties for i in range(self.num_instance_domains)],
             dtype=t.int,
         )
 
@@ -45,7 +45,7 @@ class Config:
         if self.is_product_concept:
             return 3
         elif self.is_general_concept:
-            return self.num_domains * 6 * self.layers
+            return self.num_concept_domains * 2 * 3 * self.layers
 
         return self.num_concept_domains * 3 * self.layers
 
@@ -54,14 +54,14 @@ class Config:
         return len(self.concept_domains)
 
     @property
-    def num_domains(self) -> int:
-        return len(self.domains)
+    def num_instance_domains(self) -> int:
+        return len(self.instance_domains)
 
     @property
     def num_wires(self) -> int:
         if self.is_general_concept:
-            return self.num_domains * 2
-        return self.num_domains
+            return self.num_instance_domains + self.num_concept_domains
+        return self.num_instance_domains
 
     @property
     def num_properties(self) -> int:
@@ -69,7 +69,7 @@ class Config:
 
     @property
     def num_concepts(self) -> int:
-        return self.num_domains * self.num_properties if self.is_product_concept else 1
+        return self.num_instance_domains * self.num_properties if self.is_product_concept else 1
 
     @property
     def is_product_concept(self) -> bool:
@@ -86,7 +86,7 @@ class Config:
     @property
     def concept_domain_indices(self) -> list[int]:
         return [
-            i for i, domain in enumerate(self.domains) if domain in self.concept_domains
+            i for i, domain in enumerate(self.instance_domains) if domain in self.concept_domains
         ]
 
     def add_offset(
@@ -103,7 +103,7 @@ class Config:
         return self.properties.reshape(-1)[self.add_offset(concepts).cpu().numpy()]
 
     def decode_domain(self, domain: int) -> str:
-        return self.domains[domain]
+        return self.instance_domains[domain]
 
     def trainer(self, name: str, max_epochs: int = 100) -> l.Trainer:
         class NoValidationBar(TQDMProgressBar):

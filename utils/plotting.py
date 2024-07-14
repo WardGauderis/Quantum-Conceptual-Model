@@ -114,13 +114,13 @@ def plot_model_representations(
         concepts = rearrange(
             model.vqc.concept_weights.weight.detach(),
             "(domain property) weights -> domain property weights",
-            domain=data.config.num_domains,
+            domain=data.config.num_instance_domains,
         )
 
         instances = prediction[0][2]
         instance_concepts = next(iter(data.predict_dataloader()))[1]
 
-        for domain in range(data.config.num_domains):
+        for domain in range(data.config.num_instance_domains):
             plot_representations(
                 concepts[domain],
                 instances[:, domain],

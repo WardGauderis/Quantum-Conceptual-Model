@@ -31,7 +31,7 @@ class VQC(nn.Module):
         self.circuit = qml.QNode(
             create_circuit(
                 config.concept_type,
-                config.num_domains,
+                config.num_instance_domains,
                 config.concept_domain_indices,
             ),
             dev,
@@ -44,12 +44,12 @@ class VQC(nn.Module):
         self.config = config
 
     def plot(self):
-        instance = t.zeros(self.config.num_domains, 3)
+        instance = t.zeros(self.config.num_instance_domains, 3)
 
         if self.config.is_product_concept:
             concept = rearrange(
                 self.concept_weights(
-                    t.zeros(self.config.num_domains, dtype=t.long)
+                    t.zeros(self.config.num_instance_domains, dtype=t.long)
                 ),
                 "domain weights -> domain weights",
             )

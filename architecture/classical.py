@@ -37,7 +37,7 @@ class Encoder(nn.Module):
         self.dense = nn.Sequential(
             nn.Linear(256, 256),
             nn.ReLU(True),
-            nn.Linear(256, config.num_domains // config.images_per_instance * 3),
+            nn.Linear(256, config.num_instance_domains // config.images_per_instance * 3),
             # nn.ReLU(True),
         )
 
@@ -77,7 +77,7 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.dense = nn.Sequential(
-            nn.Linear(config.num_domains * 3, 256),
+            nn.Linear(config.num_instance_domains * 3, 256),
             nn.ReLU(True),
             nn.Linear(256, 256),
             nn.ReLU(True),

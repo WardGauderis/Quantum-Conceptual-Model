@@ -152,13 +152,13 @@ def create_circuit(
             ):
                 instance_circuit(instance_domains, instance)
                 entangled_concept_circuit(
-                    list(range(num_domains * 2)),
+                    concept_domains + list(range(num_domains, num_domains + len(concept_domains))),
                     concept,
                 )
 
                 # TODO: clean up
                 return [
-                    qml.expval(qml.PauliZ(w + num_domains)) for w in range(num_domains)
+                    qml.expval(qml.PauliZ(w + num_domains)) for w in range(len(concept_domains))
                 ]
 
     return circuit
