@@ -75,18 +75,17 @@ class Hybrid(l.LightningModule):
         loss = self.loss(x, y, x_pred, y_pred)
         self.log(f"{name}_loss", loss, prog_bar=True)
         
-        
-        # if name == "train":
-        #     return loss
-        
         if self.config.is_product_concept:
             index_accuracy = self.evaluate_indices(x, index)
             for i in range(self.config.num_instance_domains):
                 self.log(f"{name}_accuracy_{i}", index_accuracy[i])
-            self.log(f"{name}_accuracy", t.mean(index_accuracy), prog_bar=True)
+            accuracy = t.mean(index_accuracy)
+            self.log(f"{name}_accuracy", accuracy, prog_bar=True)
+            self.log(f"{name}_selection", accuracy if accuracy != 1.0 else accuracy + 1 / loss)
         else:
             accuracy = self.accuracy(y_pred, y)
             self.log(f"{name}_accuracy", accuracy, prog_bar=True)
+            self.log(f"{name}_selection", accuracy if accuracy != 1.0 else accuracy + 1 / loss)
         
         return loss
 

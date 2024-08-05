@@ -116,10 +116,10 @@ class Config:
             callbacks=[
                 (
                     ModelCheckpoint(
-                        monitor="val_accuracy",
+                        monitor="val_selection",
                         mode="max",
                         save_top_k=1,
-                        filename=name + "-accuracy-{epoch:02d}",
+                        filename=name + "-selection-{epoch:02d}",
                     )
                     if self.is_entangled_concept
                     else ModelCheckpoint(
