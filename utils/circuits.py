@@ -3,6 +3,7 @@
 from functools import partial
 from re import T
 
+from numpy import shape
 import pennylane as qml
 import torch as t
 from jaxtyping import Float
@@ -111,7 +112,9 @@ def product_concept_circuit(
 def entangled_concept_circuit(
     domains: list[int], concept: Float[Tensor, "layer domain weights"]
 ):
-    StronglyEntanglingLayers(concept, wires=domains, imprimitive=qml.CZ)
+    StronglyEntanglingLayers(
+        concept, wires=domains, imprimitive=qml.CZ, ranges=[1] * concept.shape[0]
+    )
 
 
 def create_circuit(
@@ -152,13 +155,15 @@ def create_circuit(
             ):
                 instance_circuit(instance_domains, instance)
                 entangled_concept_circuit(
-                    concept_domains + list(range(num_domains, num_domains + len(concept_domains))),
+                    concept_domains
+                    + list(range(num_domains, num_domains + len(concept_domains))),
                     concept,
                 )
 
                 # TODO: clean up
                 return [
-                    qml.expval(qml.PauliZ(w + num_domains)) for w in range(len(concept_domains))
+                    qml.expval(qml.PauliZ(w + num_domains))
+                    for w in range(len(concept_domains))
                 ]
 
     return circuit

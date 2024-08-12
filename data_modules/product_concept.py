@@ -26,7 +26,6 @@ class ProductConceptDataset(Dataset):
         self.concepts = read_csv(join(name, "product_concepts.csv"), dtype="category")
 
         self.config = Config(
-            name,
             np.array(self.concepts.columns),
             np.array(
                 [

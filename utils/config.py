@@ -121,13 +121,13 @@ class Config:
                         save_top_k=1,
                         filename=name + "-selection-{epoch:02d}",
                     )
-                    if self.is_entangled_concept
-                    else ModelCheckpoint(
-                        monitor="val_loss",
-                        mode="min",
-                        save_top_k=1,
-                        filename=name + "-loss-{epoch:02d}",
-                    )
+                    # if self.is_entangled_concept
+                    # else ModelCheckpoint(
+                    #     monitor="val_loss",
+                    #     mode="min",
+                    #     save_top_k=1,
+                    #     filename=name + "-loss-{epoch:02d}",
+                    # )
                 ),
                 NoValidationBar(),
             ],
