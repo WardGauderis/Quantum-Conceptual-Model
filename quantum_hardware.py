@@ -1,20 +1,34 @@
 # %%
 
-import copy
-
+import dis
 from architecture import Hybrid
 from data_modules import EntangledConceptDataModule, ProductConceptDataModule
-from utils import plot_model_representations
 
-# %% BLACKBIRD MODEL
+from einops import rearrange
 
-blackbird = ProductConceptDataModule("blackbird/data/balanced", 2**6)
-blackbird_model = Hybrid(blackbird.config)
-blackbird_trainer = blackbird.config.trainer("blackbird")
+# %% BLACKBIRD DATASET AND MODELS
 
-blackbird_model.vqc.plot()
+blackbird = EntangledConceptDataModule("blackbird/data/balanced", "blackbird", 2**6)
+config = blackbird.config
+
+blackbird_model = Hybrid.load_from_checkpoint("lightning_logs/blackbird/checkpoints/blackbird-selection-epoch=44.ckpt")
+distribute_three_model = Hybrid.load_from_checkpoint("lightning_logs/distribute_three/checkpoints/progression-selection-epoch=99.ckpt")
+progression_model = Hybrid.load_from_checkpoint("lightning_logs/progression/checkpoints/progression-selection-epoch=99.ckpt")
+
+instances, labels = next(iter(blackbird.test_dataloader()))
+instances, labels = instances.to(blackbird_model.device), labels.to(blackbird_model.device)
+
+encoder = blackbird_model.encoder
+distribute_three = distribute_three_model.vqc
+progression = progression_model.vqc
 
 #%%
+
+encodings = encoder(instances, config.images_per_instance)
+
+#%%
+
+distribute_three.plot()
 
 # %%
 plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_size=1000)

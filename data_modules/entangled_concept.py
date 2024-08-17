@@ -4,6 +4,7 @@ from typing import Tuple
 
 import lightning as l
 import numpy as np
+from sklearn.calibration import column_or_1d
 import torch as t
 from einops import pack, rearrange
 from jaxtyping import Float, Int
@@ -26,12 +27,12 @@ class EntangledConceptDataset(Dataset):
                 self.config = Config(
                     np.array(
                         [
+                            "color_0",
+                            "position_0",
                             "color_1",
                             "position_1",
                             "color_2",
                             "position_2",
-                            "color_3",
-                            "position_3",
                         ]
                     ),
                     np.array([["0"], ["0"], ["0"], ["0"], ["0"], ["0"]]),
@@ -39,7 +40,15 @@ class EntangledConceptDataset(Dataset):
                 )
                 self.config.images_per_instance = 3
             case "blackbird":
-                concepts = read_csv(join(name, "blackbird.csv"), dtype="category")
+                concepts = read_csv(join(name, "blackbird.csv"), dtype={"correct": "bool"})
+                self.config = Config(
+                    np.array([column for column in concepts.columns if column != "correct"]),
+                    np.array(
+                        [["0"] for column in concepts.columns if column != "correct"]
+                    ),
+                    "general",
+                )
+                self.config.images_per_instance = 9
             case _:
                 concepts = read_csv(
                     join(name, "product_concepts.csv"), dtype="category"
@@ -76,12 +85,13 @@ class EntangledConceptDataset(Dataset):
                 domains = ["color", "shape"]
             case "progression":
                 concepts = concepts["correct"]
-                domains = ["position_1", "position_2", "position_3"]
+                domains = ["position_0", "position_1", "position_2"]
             case "distribute_three":
                 concepts = concepts["correct"]
-                domains = ["color_1", "color_2", "color_3"]
+                domains = ["color_0", "color_1", "color_2"]
             case "blackbird":
                 concepts = concepts["correct"]
+                domains = self.config.instance_domains
 
         self.concepts = t.tensor(concepts, dtype=t.double)
         self.config.concept_domains = np.array(domains)
