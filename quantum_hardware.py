@@ -12,8 +12,8 @@ blackbird = EntangledConceptDataModule("blackbird/data/balanced", "blackbird", 2
 config = blackbird.config
 
 blackbird_model = Hybrid.load_from_checkpoint("lightning_logs/blackbird/checkpoints/blackbird-selection-epoch=44.ckpt")
-distribute_three_model = Hybrid.load_from_checkpoint("lightning_logs/distribute_three/checkpoints/progression-selection-epoch=99.ckpt")
-progression_model = Hybrid.load_from_checkpoint("lightning_logs/progression/checkpoints/progression-selection-epoch=99.ckpt")
+distribute_three_model = Hybrid.load_from_checkpoint("lightning_logs/distribute_three/checkpoints/distribute_three-selection-epoch=42.ckpt")
+progression_model = Hybrid.load_from_checkpoint("lightning_logs/progression/checkpoints/progression-selection-epoch=98.ckpt")
 
 instances, labels = next(iter(blackbird.test_dataloader()))
 instances, labels = instances.to(blackbird_model.device), labels.to(blackbird_model.device)
