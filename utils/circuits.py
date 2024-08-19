@@ -1,6 +1,7 @@
 # %%
 
 from functools import partial
+from random import choice
 from re import T
 
 from numpy import shape
@@ -121,6 +122,7 @@ def create_circuit(
     type: str,
     num_domains: int,
     concept_domains: list[int],
+    missing_domain_index: int = 0,
 ):
     instance_domains = list(range(num_domains))
 
@@ -149,24 +151,57 @@ def create_circuit(
 
         case "general":
 
+            auxiliary = list(range(num_domains, num_domains + len(concept_domains)))
+
             def circuit(
                 instance: Float[Tensor, "domain weights batch"],
                 concept: Float[Tensor, "layer domain weights batch"],
             ):
                 instance_circuit(instance_domains, instance)
                 entangled_concept_circuit(
-                    concept_domains
-                    + list(range(num_domains, num_domains + len(concept_domains))),
+                    concept_domains + auxiliary,
                     concept,
                 )
 
-                # TODO: clean up
-                return [
-                    qml.expval(qml.PauliZ(w + num_domains))
-                    for w in range(len(concept_domains))
-                ]
+                # return qml.probs(auxiliary)
+                return [qml.expval(qml.PauliZ(w)) for w in auxiliary]
+
+        case "generative":
+
+            auxiliary = list(range(num_domains, num_domains + len(concept_domains)))
+            
+            missing_domain = concept_domains[missing_domain_index]
+            instance_domains.remove(missing_domain)
+            
+            output_domain = num_domains + len(concept_domains)
+
+            def circuit(
+                instance: Float[Tensor, "domain weights batch"],
+                concept: Float[Tensor, "layer domain weights batch"],
+                output_property: Float[Tensor, "domain weights batch"],
+            ):
+                qml.Hadamard(output_domain)
+                qml.CNOT([output_domain, missing_domain])
+                product_concept_circuit([output_domain], output_property)
+
+                # remove missing domain from instance encodings
+                instance = instance[instance_domains]
+
+                instance_circuit(instance_domains, instance)
+                entangled_concept_circuit(
+                    concept_domains + auxiliary,
+                    concept,
+                )
+
+                return qml.probs(auxiliary + [output_domain])
+                # return [qml.expval(qml.PauliZ(w)) for w in auxiliary + [output_domain]]
 
     return circuit
+
+
+# %%
+
+# general, 6, [1, 3, 5]
 
 
 # %%

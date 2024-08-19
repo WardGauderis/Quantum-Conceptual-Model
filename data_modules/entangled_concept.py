@@ -90,6 +90,7 @@ class EntangledConceptDataset(Dataset):
                 concepts = concepts["correct"]
                 domains = ["color_0", "color_1", "color_2"]
             case "blackbird":
+                self.properties = concepts.drop(columns=["correct"])
                 concepts = concepts["correct"]
                 domains = self.config.instance_domains
 
