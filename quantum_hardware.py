@@ -1,5 +1,6 @@
 # %%
 
+from random import randint
 import pennylane as qml
 import torch as t
 from einops import rearrange, reduce, repeat
@@ -93,7 +94,7 @@ print_stats(probs, labels)
 
 preds = probs > 0.5**6
 accuracy = (preds == labels).float().mean()
-print(f"Accuracy: {accuracy}")
+print(f"Blackbird detection accuracy: {accuracy}")
 
 # %%
 
@@ -108,16 +109,21 @@ position_encodings = property_encodings[offsets[1] : offsets[1] + len(properties
 
 dev = qml.device("default.qubit", wires=10)
 
-missing_domain_index = 0
+# influences position circuit and selects color constraint
+missing_row = randint(0, 2)
+# influences color circuit and selects position constraint
+missing_column = randint(0, 2)
+
+print(f"Missing panel at ({missing_row}, {missing_column})")
 
 
-def create_and_visualise_circuit(vqc: VQC) -> qml.QNode:
+def create_and_visualise_circuit(vqc: VQC, row_wise: bool) -> qml.QNode:
     circuit = qml.QNode(
         create_circuit(
             "generative",
             vqc.config.num_instance_domains,
             vqc.config.concept_domain_indices,
-            missing_domain_index=missing_domain_index,
+            missing_domain_index=missing_column if row_wise else missing_row,
         ),
         dev,
         interface="torch",
@@ -139,8 +145,8 @@ def create_and_visualise_circuit(vqc: VQC) -> qml.QNode:
     return circuit
 
 
-color_circuit = create_and_visualise_circuit(distribute_three)
-position_circuit = create_and_visualise_circuit(progression)
+color_circuit = create_and_visualise_circuit(distribute_three, row_wise=True)
+position_circuit = create_and_visualise_circuit(progression, row_wise=False)
 
 # %%  COLOR AND POSITION PREDICTIONS
 
@@ -150,14 +156,14 @@ def make_property_predictions(
 ) -> t.Tensor:
     if row_wise:
         row = repeat(
-            encodings[labels == 1],
-            "puzzle row column domain encoding -> (column domain) encoding (puzzle row property)",
+            encodings[labels == 1, missing_row, :],
+            "puzzle column domain encoding -> (column domain) encoding (puzzle property)",
             property=len(property_encodings),
         )
     else:  # if column-wise, replace row with column
         row = repeat(
-            encodings[labels == 1],
-            "puzzle row column domain encoding -> (row domain) encoding (puzzle column property)",
+            encodings[labels == 1, :, missing_column],
+            "puzzle row domain encoding -> (row domain) encoding (puzzle property)",
             property=len(property_encodings),
         )
 
@@ -173,26 +179,27 @@ def make_property_predictions(
     conjugated_properties[:, 1] *= -1
     properties = repeat(
         conjugated_properties,
-        "property (encoding) -> domain encoding (puzzle row property)",
+        "property (encoding) -> domain encoding (puzzle property)",
         puzzle=len(encodings[labels == 1]),
-        row=3,
         domain=1,
     )
 
     property_probs = circuit(row, concept, properties)[:, 0]
     property_probs = rearrange(
         property_probs,
-        "(puzzle row property) -> puzzle row property",
-        row=3,
+        "(puzzle property) -> puzzle property",
         property=len(property_encodings),
     )
 
-    property_preds = t.argmax(property_probs, dim=2)
+    property_preds = t.argmax(property_probs, dim=1)
     return property_preds
 
 
 def check_color(colors: np.ndarray):
-    return np.unique(colors).size == 3
+    valid_colors = ["red", "green", "blue", "yellow"]
+    return np.unique(colors).size == 3 and all(
+        color in valid_colors for color in colors
+    )
 
 
 def check_position(positions: np.ndarray):
@@ -203,21 +210,42 @@ def check_position(positions: np.ndarray):
         or (positions == np.array(["bottom_right", "bottom_left", "top_left"])).all()
     )
 
+
+def check_puzzle(puzzle: np.ndarray):
+    color_accuracy = np.apply_along_axis(check_color, 1, puzzle[0]).all()
+    position_accuracy = np.apply_along_axis(check_position, 0, puzzle[1]).all()
+    return color_accuracy and position_accuracy
+
+
 # %%
 
 color_preds = make_property_predictions(
     distribute_three, color_circuit, color_encodings, row_wise=True
 )
-row_preds = property_labels[:, 0].copy()
-row_preds[:, :, missing_domain_index] = properties[0, color_preds.cpu()]
-accuracy = np.apply_along_axis(check_color, 2, row_preds).mean()
-print(f"Row Accuracy: {accuracy}")
-
 position_preds = make_property_predictions(
     progression, position_circuit, position_encodings, row_wise=False
 )
-column_preds = property_labels[:, 1].copy()
-column_preds[:, missing_domain_index] = properties[1, position_preds.cpu()]
-accuracy = np.apply_along_axis(check_position, 1, column_preds).mean()
-print(f"Column Accuracy: {accuracy}")
+
+
+preds = property_labels.copy()
+preds[:, :, missing_row, missing_column] = "MISSING"
+
+preds[:, 0, missing_row, missing_column] = properties[0, color_preds.cpu()]
+preds[:, 1, missing_row, missing_column] = properties[1, position_preds.cpu()]
+
+
+correct = np.apply_along_axis(
+    lambda puzzle: check_puzzle(
+        rearrange(
+            puzzle, "(property row column) -> property row column", row=3, column=3
+        )
+    ),
+    1,
+    rearrange(preds, "puzzle property row column -> puzzle (property row column)"),
+)
+
+print(f"Blackbird solving accuracy: {correct.mean()}")
+
+new_solution = property_labels != preds
+print(f"Found {new_solution.sum()} new solutions out of {len(new_solution)} solvable puzzles")
 # %%
