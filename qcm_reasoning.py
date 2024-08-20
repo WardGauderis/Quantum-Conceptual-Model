@@ -58,7 +58,7 @@ distribute_three_trainer.test(distribute_three_model, distribute_three, ckpt_pat
 # %% PROGRESSION CONCEPT
 
 progression = EntangledConceptDataModule("blackbird/data/balanced", "progression", 2**6)
-progression.config.layers = 4
+progression.config.layers = 8
 progression_model = Hybrid(progression.config)
 
 blackbird_model = Hybrid.load_from_checkpoint(

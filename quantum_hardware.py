@@ -17,6 +17,8 @@ from data_modules import EntangledConceptDataModule
 from utils.circuits import create_circuit
 import matplotlib.pyplot as plt
 
+t.set_grad_enabled(False)
+
 # %% BLACKBIRD DATASET AND MODELS
 
 blackbird = EntangledConceptDataModule("blackbird/data/balanced", "blackbird", 2**6)
@@ -119,9 +121,9 @@ position_encodings = property_encodings[offsets[1] : offsets[1] + len(properties
 
 
 # influences position circuit and selects color constraint
-missing_row = randint(0, 2)
+missing_row = 2 #randint(0, 2)
 # influences color circuit and selects position constraint
-missing_column = randint(0, 2)
+missing_column = 0 #randint(0, 2)
 
 print(f"Missing panel at ({missing_row}, {missing_column})")
 
@@ -151,9 +153,10 @@ def create_and_visualise_circuit(
     )
     output_property = t.zeros(1, 3)
 
-    qml.draw_mpl(circuit, style="black_white", expansion_strategy="device")(
+    fig, axes = qml.draw_mpl(circuit, style="black_white", expansion_strategy="device")(
         instance, concept, output_property
     )
+    fig.show()
 
     return circuit
 
@@ -230,7 +233,7 @@ def check_position(positions: np.ndarray):
 def check_puzzle(puzzle: np.ndarray):
     color_accuracy = np.apply_along_axis(check_color, 1, puzzle[0]).all()
     position_accuracy = np.apply_along_axis(check_position, 0, puzzle[1]).all()
-    return color_accuracy and position_accuracy
+    return position_accuracy
 
 
 def check_predictions(color_preds, position_preds, property_labels):
@@ -256,8 +259,7 @@ def check_predictions(color_preds, position_preds, property_labels):
     print(
         f"Found {new_solution.sum()} new solutions out of {len(new_solution)} solved puzzles"
     )
-
-
+    
 # %%
 
 dev = qml.device("default.qubit", wires=10)
@@ -284,14 +286,25 @@ check_predictions(color_preds, position_preds, property_labels)
 
 # %% ############################################################################
 
-# service = QiskitRuntimeService(channel="ibm_quantum", instance="ibm-q/open/main")
+service = QiskitRuntimeService(channel="ibm_quantum", instance="ibm-q/open/main")
+
+backend = FakeKyiv()
+print(f"{backend.name}: {backend.status().pending_jobs} pending jobs")
+
+
 # backend = service.least_busy(operational=True, simulator=False, min_num_qubits=10)
+# backend = service.backend("ibm_kyiv")
 # print(f"{backend.name}: {backend.status().pending_jobs} pending jobs")
 
 backend = FakeKyiv()
 print(f"{backend.name}: {backend.status().pending_jobs} pending jobs")
 
-dev = qml.device("qiskit.remote", wires=10, backend=backend, shots=2**12, optimization_level=3)
+dev = qml.device("qiskit.remote", wires=10, backend=backend, shots=2**14,)
+
+# dev = qml.device("default.qubit", wires=10)
+
+color_circuit = create_and_visualise_circuit(distribute_three, dev, row_wise=True)
+position_circuit = create_and_visualise_circuit(progression, dev, row_wise=False)
 
 # job = service.jobs()[0]
 # result = job.result()
@@ -304,26 +317,68 @@ dev = qml.device("qiskit.remote", wires=10, backend=backend, shots=2**12, optimi
 # %%
 %%time
 
-dev = qml.device("default.qubit", wires=10)
+# SOLUTIONS
 
-color_circuit = create_and_visualise_circuit(distribute_three, dev, row_wise=True)
-position_circuit = create_and_visualise_circuit(progression, dev, row_wise=False)
+# less wires
+# remove bell state
 
-amount = len(labels[labels == 1])
+# better simulator <- nothing
+
+# check flags
+
+# more shots <- nothing
+
+amount = 5 #len(labels[labels == 1])
+batch = 2
+
+# 0: 12, 0, 0 -> 0
+# 1 color: 12, 2, 2 botched
+# 1: 13, 2, 2 -> 1 (color 4)
+# 2: 14, 2, 2
+
+r = range(batch*amount, (batch+1)*amount)
 
 color_preds, full_color_probs = make_property_predictions(
     distribute_three,
     color_circuit,
-    encodings[labels == 1][:amount],
+    encodings[labels == 1][r],
     color_encodings,
     row_wise=True,
 )
+if dev.name == "Qiskit PennyLane plugin" and backend.name != "fake_kyiv":
+    t.save(color_preds, f"color_preds_batch{batch}.pt")
+    t.save(full_color_probs, f"full_color_probs_batch{batch}.pt")
+
 position_preds, full_position_probs = make_property_predictions(
     progression,
     position_circuit,
-    encodings[labels == 1][:amount],
+    encodings[labels == 1][r],
     position_encodings,
     row_wise=False,
 )
+if dev.name == "Qiskit PennyLane plugin" and backend.name != "fake_kyiv":
+    t.save(position_preds, f"position_preds_batch{batch}.pt")
+    t.save(full_position_probs, f"full_position_probs_batch{batch}.pt")
 
-check_predictions(color_preds, position_preds, property_labels[:amount])
+check_predictions(color_preds, position_preds, property_labels[r])
+
+
+
+#%%
+
+# position = t.load(f"position_preds_batch{0}.pt")
+# color = t.load(f"color_preds_batch{0}.pt")
+
+# check_predictions(color, position, property_labels[0:5])
+
+# result = service.job("cv31gqtfkm5g0084z6qg").result()
+# result = marginal_counts(result, [6, 7, 8, 9])
+
+# # %%
+# plot_distribution(result.get_counts(0), number_to_keep=20)
+# # %%
+# for i in range(8, 12):
+#     print(result.get_counts(i)["0000"] / result.get_counts(i)["0001"])
+#     print(result.get_counts(i)["0000"])
+
+# # %% [2, 0, 2, 1, 3]
