@@ -37,8 +37,8 @@ class Hybrid(l.LightningModule):
     ]:
         encoding = self.encoder(x, self.config.images_per_instance)
         y_pred = self.vqc(encoding, index)
-        if product:
-            y_pred = reduce(y_pred, "batch domain -> batch", "prod")
+        # if product:
+        #     y_pred = reduce(y_pred, "batch domain -> batch", "prod")
         # x_pred = self.decoder(encoding)
         return x, y_pred, encoding
 
@@ -75,17 +75,17 @@ class Hybrid(l.LightningModule):
         loss = self.loss(x, y, x_pred, y_pred)
         self.log(f"{name}_loss", loss, prog_bar=True)
         
-        if self.config.is_product_concept:
-            index_accuracy = self.evaluate_indices(x, index)
-            for i in range(self.config.num_instance_domains):
-                self.log(f"{name}_accuracy_{i}", index_accuracy[i])
-            accuracy = t.mean(index_accuracy)
-            self.log(f"{name}_accuracy", accuracy, prog_bar=True)
-            self.log(f"{name}_selection", accuracy if accuracy != 1.0 else accuracy + 1 / loss)
-        else:
-            accuracy = self.accuracy(y_pred, y)
-            self.log(f"{name}_accuracy", accuracy, prog_bar=True)
-            self.log(f"{name}_selection", accuracy if accuracy != 1.0 else accuracy + 1 / loss)
+        # if self.config.is_product_concept:
+        #     index_accuracy = self.evaluate_indices(x, index)
+        #     for i in range(self.config.num_instance_domains):
+        #         self.log(f"{name}_accuracy_{i}", index_accuracy[i])
+        #     accuracy = t.mean(index_accuracy)
+        #     self.log(f"{name}_accuracy", accuracy, prog_bar=True)
+        #     self.log(f"{name}_selection", accuracy if accuracy != 1.0 else accuracy + 1 / loss)
+        # else:
+        accuracy = self.accuracy(y_pred, y)
+        self.log(f"{name}_accuracy", accuracy, prog_bar=True)
+        self.log(f"{name}_selection", accuracy if accuracy != 1.0 else accuracy + 1 / loss)
         
         return loss
 

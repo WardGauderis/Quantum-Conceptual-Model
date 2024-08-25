@@ -136,7 +136,8 @@ def create_circuit(
                 instance_circuit(instance_domains, instance)
                 product_concept_circuit(concept_domains, concept)
 
-                return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
+                return qml.probs(concept_domains)
+                # return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
 
         case "domain_only":
 
@@ -147,7 +148,8 @@ def create_circuit(
                 instance_circuit(instance_domains, instance)
                 entangled_concept_circuit(concept_domains, concept)
 
-                return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
+                return qml.probs(concept_domains)
+                # return [qml.expval(qml.PauliZ(w)) for w in concept_domains]
 
         case "general":
 
@@ -163,8 +165,8 @@ def create_circuit(
                     concept,
                 )
 
-                # return qml.probs(auxiliary)
-                return [qml.expval(qml.PauliZ(w)) for w in auxiliary]
+                return qml.probs(auxiliary)
+                # return [qml.expval(qml.PauliZ(w)) for w in auxiliary]
 
         case "generative":
 

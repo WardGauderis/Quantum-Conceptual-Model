@@ -88,17 +88,11 @@ class VQC(nn.Module):
         # TODO: switch to qml.probs instead of qml.expval
         # This requires removing the exp -> probs hack and domain probability multiplication with on/off switch for per domain probabilities
         
-        # probabilities = self.circuit(instance, concept)[:, 0]
-        # return rearrange(probabilities, "domain batch -> batch domain")
-        # color_probs = rearrange(
-        #     color_probs,
-        #     "(puzzle row color) -> puzzle row color",
-        #     row=3,
-        #     color=len(color_encodings),
-        # )
+        probabilities = self.circuit(instance, concept)[:, 0]
+        return probabilities.double()
 
-        probabilities = t.stack(self.circuit(instance, concept)) / 2 + 0.5
-        return rearrange(probabilities, "domain batch -> batch domain")
+        # probabilities = t.stack(self.circuit(instance, concept)) / 2 + 0.5
+        # return rearrange(probabilities, "domain batch -> batch domain")
 
 
 # %%

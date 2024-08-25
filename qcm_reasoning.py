@@ -38,7 +38,7 @@ plot_model_representations(blackbird, blackbird_model, blackbird_trainer, batch_
 # %% DISTRIBUTE_TREE CONCEPT
 
 distribute_three = EntangledConceptDataModule("blackbird/data/balanced", "distribute_three", 2**6)
-distribute_three.config.layers = 8
+distribute_three.config.layers = 16
 distribute_three_model = Hybrid(distribute_three.config)
 
 blackbird_model = Hybrid.load_from_checkpoint(

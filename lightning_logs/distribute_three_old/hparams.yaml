@@ -12,7 +12,7 @@ config: !!python/object:utils.config.Config
       - 3
     - !!python/object/apply:numpy.dtype
       args:
-      - U10
+      - U7
       - false
       - true
       state: !!python/tuple
@@ -21,14 +21,13 @@ config: !!python/object:utils.config.Config
       - null
       - null
       - null
-      - 40
+      - 28
       - 4
       - 8
     - false
     - !!binary |
-      cAAAAG8AAABzAAAAaQAAAHQAAABpAAAAbwAAAG4AAABfAAAAMAAAAHAAAABvAAAAcwAAAGkAAAB0
-      AAAAaQAAAG8AAABuAAAAXwAAADEAAABwAAAAbwAAAHMAAABpAAAAdAAAAGkAAABvAAAAbgAAAF8A
-      AAAyAAAA
+      YwAAAG8AAABsAAAAbwAAAHIAAABfAAAAMAAAAGMAAABvAAAAbAAAAG8AAAByAAAAXwAAADEAAABj
+      AAAAbwAAAGwAAABvAAAAcgAAAF8AAAAyAAAA
   concept_type: general
   images_per_instance: 3
   instance_domains: !!python/object/apply:numpy.core.multiarray._reconstruct
@@ -70,8 +69,8 @@ config: !!python/object:utils.config.Config
       gAKKCmz8nEb5IGqoUBkugAJN6QMugAJ9cQAoWBAAAABwcm90b2NvbF92ZXJzaW9ucQFN6QNYDQAA
       AGxpdHRsZV9lbmRpYW5xAohYCgAAAHR5cGVfc2l6ZXNxA31xBChYBQAAAHNob3J0cQVLAlgDAAAA
       aW50cQZLBFgEAAAAbG9uZ3EHSwR1dS6AAihYBwAAAHN0b3JhZ2VxAGN0b3JjaApJbnRTdG9yYWdl
-      CnEBWA4AAAA5NDcwNzkwMTU1OTM2MHECWAMAAABjcHVxA0sGTnRxBFEugAJdcQBYDgAAADk0NzA3
-      OTAxNTU5MzYwcQFhLgYAAAAAAAAAAAAAAAEAAAACAAAAAwAAAAQAAAAFAAAA
+      CnEBWA4AAAA5MzkwMzg0NjY2NDQ5NnECWAMAAABjcHVxA0sGTnRxBFEugAJdcQBYDgAAADkzOTAz
+      ODQ2NjY0NDk2cQFhLgYAAAAAAAAAAAAAAAEAAAACAAAAAwAAAAQAAAAFAAAA
   - 0
   - !!python/tuple
     - 6
