@@ -550,7 +550,7 @@ service = QiskitRuntimeService(channel="ibm_quantum", instance="ibm-q/open/main"
 
 # backend = service.least_busy(operational=True, simulator=False, min_num_qubits=7)
 backend = service.backend("ibm_kyiv")
-# backend = AerSimulator.from_backend(backend)
+backend = AerSimulator.from_backend(backend)
 print(f"{backend.name}: {backend.status().pending_jobs} pending jobs")
 
 dev = qml.device("qiskit.remote", wires=7, backend=backend, shots=2**14,     
@@ -584,15 +584,15 @@ batch = 0
 
 r = range(batch*amount, (batch+1)*amount)
 
-full_color_probs = make_property_predictions(
-    distribute_three,
-    color_circuit,
-    encodings[labels == 1][r],
-    color_encodings,
-    row_wise=True,
-)
-if dev.name == "Qiskit PennyLane plugin" and "fake" not in backend.name:
-    t.save(full_color_probs, f"full_color_probs_batch{batch}.pt")
+# full_color_probs = make_property_predictions(
+#     distribute_three,
+#     color_circuit,
+#     encodings[labels == 1][r],
+#     color_encodings,
+#     row_wise=True,
+# )
+# if dev.name == "Qiskit PennyLane plugin" and "fake" not in backend.name:
+#     t.save(full_color_probs, f"full_color_probs_batch{batch}.pt")
 
 full_position_probs = make_property_predictions(
     progression,
@@ -610,21 +610,7 @@ check_predictions(full_color_probs, full_position_probs, property_labels[r])
 
 #%%
 
-# position = t.load(f"position_preds_batch{0}.pt")
-# color = t.load(f"color_preds_batch{0}.pt")
+full_color_probs = t.load(f"full_color_probs_batch{0} copy 4.pt")
 
-# check_predictions(color, position, property_labels[0:5])
-
-# result = service.job("cv31gqtfkm5g0084z6qg").result()
-# result = marginal_counts(result, [6, 7, 8, 9])
-
-# # %%
-# plot_distribution(result.get_counts(0), number_to_keep=20)
-# # %%
-# for i in range(8, 12):
-#     print(result.get_counts(i)["0000"] / result.get_counts(i)["0001"])
-#     print(result.get_counts(i)["0000"])
-
-# # %% [2, 0, 2, 1, 3]
 
 # %%
